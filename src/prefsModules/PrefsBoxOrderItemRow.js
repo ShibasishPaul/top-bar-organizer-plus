@@ -46,12 +46,27 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
         // `this`.
         let dragSource = new Gtk.DragSource();
         dragSource.set_actions(Gdk.DragAction.MOVE);
-        dragSource.connect("prepare", () => {
+        dragSource.connect("prepare", (source, x, y) => {
+            this._drag_starting_point_x = x;
+            this._drag_starting_point_y = y;
             return Gdk.ContentProvider.new_for_value(this);
         });
         // Stop all scrolling, which is due to this DND operation.
         dragSource.connect("drag-end", () => {
             scrollManager.stopScrollAll();
+        });
+        dragSource.connect("drag-begin", (source, drag) => {
+            let dragWidget = new Gtk.ListBox();
+            let allocation = this.get_allocation();
+            dragWidget.set_size_request(allocation.width, allocation.height);
+
+            let dragPrefsBoxOrderItemRow = new PrefsBoxOrderItemRow({}, null, this.item)
+            dragWidget.append(dragPrefsBoxOrderItemRow);
+            dragWidget.drag_highlight_row(dragPrefsBoxOrderItemRow);
+
+            let currentDragIcon = Gtk.DragIcon.get_for_drag(drag);
+            currentDragIcon.set_child(dragWidget);
+            drag.set_hotspot(this._drag_starting_point_x, this._drag_starting_point_y);
         });
         this.add_controller(dragSource);
 
