@@ -1,7 +1,7 @@
 /*
  * This file is part of Top-Bar-Organizer (a Gnome Shell Extension for
  * organizing your Gnome Shell top bar).
- * Copyright (C) 2021 Julian Schacher
+ * Copyright (C) 2021-2022 Julian Schacher
  *
  * Top-Bar-Organizer is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ const Gtk = imports.gi.Gtk;
 const Gdk = imports.gi.Gdk;
 const Gio = imports.gi.Gio;
 const GObject = imports.gi.GObject;
+const Adw = imports.gi.Adw;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -34,7 +35,7 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
         "item-name-display-label",
         "menu-button"
     ]
-}, class PrefsBoxOrderItemRow extends Gtk.ListBoxRow {
+}, class PrefsBoxOrderItemRow extends Adw.ActionRow {
     _init(params = {}, scrollManager, item) {
         super._init(params);
 

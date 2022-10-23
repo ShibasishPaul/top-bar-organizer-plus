@@ -1,7 +1,7 @@
 /*
  * This file is part of Top-Bar-Organizer (a Gnome Shell Extension for
  * organizing your Gnome Shell top bar).
- * Copyright (C) 2021 Julian Schacher
+ * Copyright (C) 2021-2022 Julian Schacher
  *
  * Top-Bar-Organizer is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 const Gtk = imports.gi.Gtk;
 const GObject = imports.gi.GObject;
+const Adw = imports.gi.Adw;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -30,45 +31,27 @@ const PrefsBoxOrderListEmptyPlaceholder = Me.imports.prefsModules.PrefsBoxOrderL
 const PrefsBoxOrderItemRow = Me.imports.prefsModules.PrefsBoxOrderItemRow;
 const ScrollManager = Me.imports.prefsModules.ScrollManager;
 
-var PrefsWidget = GObject.registerClass({
-    GTypeName: "PrefsWidget",
-    Template: Me.dir.get_child("prefs-widget.ui").get_uri(),
+var PrefsPage = GObject.registerClass({
+    GTypeName: "PrefsPage",
+    Template: Me.dir.get_child("prefs-page.ui").get_uri(),
     InternalChildren: [
         "left-box",
         "center-box",
         "right-box"
     ]
-}, class PrefsWidget extends Gtk.ScrolledWindow {
+}, class PrefsPage extends Adw.PreferencesPage {
     _init(params = {}) {
         super._init(params);
 
         this._settings = ExtensionUtils.getSettings();
 
-        // Never show a horizontal scrollbar.
-        // Achieved by setting the hscrollbar_policy to 2, while setting the
-        // vscrollbar_policy to 1 (the default value).
-        this.set_policy(2, 1);
-
-        // Set the default size of the preferences window to a sensible value on
-        // realize.
-        this.connect("realize", () => {
-            // Get the window.
-            const window = this.get_root();
-
-            // Use 500 and 750 for the default size.
-            // Those are the same values the Just Perfection Gnome Shell
-            // extension uses.
-            // It seems like those values only get used the first time the
-            // preferences window gets opened in a session. On all consecutive
-            // opens, the window is a bit larger than those values.
-            window.default_width = 500;
-            window.default_height = 750;
-        });
-
         // Scroll up or down, when a Drag-and-Drop operation is in progress and
         // the user has their cursor either in the upper or lower 10% of this
         // widget respectively.
-        this._scrollManager = new ScrollManager.ScrollManager(this);
+        // Pass `this.get_first_child()` to the ScrollManager, since this
+        // `PrefsPage` extends an `Adw.PreferencesPage` and the first child of
+        // an `Adw.PreferencesPage` is the built-in `Gtk.ScrolledWindow`.
+        this._scrollManager = new ScrollManager.ScrollManager(this.get_first_child());
         let controller = new Gtk.DropControllerMotion();
         controller.connect("motion", (_, x, y) => {
             // If the pointer is currently in the upper ten percent of this
@@ -115,7 +98,7 @@ var PrefsWidget = GObject.registerClass({
 });
 
 function buildPrefsWidget() {
-    return new PrefsWidget();
+    return new PrefsPage();
 }
 
 function init() {
