@@ -18,7 +18,7 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
         "menu-button"
     ]
 }, class PrefsBoxOrderItemRow extends Adw.ActionRow {
-    constructor(params = {}, scrollManager, item) {
+    constructor(params = {}, item) {
         super(params);
 
         this._associateItem(item);
@@ -42,7 +42,7 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
             let allocation = this.get_allocation();
             dragWidget.set_size_request(allocation.width, allocation.height);
 
-            let dragPrefsBoxOrderItemRow = new PrefsBoxOrderItemRow({}, null, this.item)
+            let dragPrefsBoxOrderItemRow = new PrefsBoxOrderItemRow({}, this.item)
             dragWidget.append(dragPrefsBoxOrderItemRow);
             dragWidget.drag_highlight_row(dragPrefsBoxOrderItemRow);
 

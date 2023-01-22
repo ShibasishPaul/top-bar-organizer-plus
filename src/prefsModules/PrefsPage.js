@@ -31,21 +31,21 @@ var PrefsPage = GObject.registerClass({
         // Pass `this.get_first_child()` to the ScrollManager, since this
         // `PrefsPage` extends an `Adw.PreferencesPage` and the first child of
         // an `Adw.PreferencesPage` is the built-in `Gtk.ScrolledWindow`.
-        this._scrollManager = new ScrollManager.ScrollManager(this.get_first_child());
+        globalThis.scrollManager = new ScrollManager.ScrollManager(this.get_first_child());
         let controller = new Gtk.DropControllerMotion();
         controller.connect("motion", (_, x, y) => {
             // If the pointer is currently in the upper ten percent of this
             // widget, then scroll up.
-            if (y <= this.get_allocated_height() * 0.1) this._scrollManager.startScrollUp();
+            if (y <= this.get_allocated_height() * 0.1) scrollManager.startScrollUp();
             // If the pointer is currently in the lower ten percent of this
             // widget, then scroll down.
-            else if (y >= this.get_allocated_height() * 0.9) this._scrollManager.startScrollDown();
+            else if (y >= this.get_allocated_height() * 0.9) scrollManager.startScrollDown();
             // Otherwise stop scrolling.
-            else this._scrollManager.stopScrollAll();
+            else scrollManager.stopScrollAll();
         });
         controller.connect("leave", () => {
             // Stop scrolling on leave.
-            this._scrollManager.stopScrollAll();
+            scrollManager.stopScrollAll();
         });
         this.add_controller(controller);
 
@@ -62,7 +62,7 @@ var PrefsPage = GObject.registerClass({
             // Add the items of the given configured box order as
             // GtkListBoxRows.
             for (const item of boxOrder) {
-                const listBoxRow = new PrefsBoxOrderItemRow.PrefsBoxOrderItemRow({}, this._scrollManager, item);
+                const listBoxRow = new PrefsBoxOrderItemRow.PrefsBoxOrderItemRow({}, item);
                 gtkListBox.append(listBoxRow);
             }
 
