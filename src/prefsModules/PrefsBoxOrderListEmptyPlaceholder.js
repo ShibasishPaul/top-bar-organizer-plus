@@ -12,10 +12,6 @@ var PrefsBoxOrderListEmptyPlaceholder = GObject.registerClass({
     GTypeName: "PrefsBoxOrderListEmptyPlaceholder",
     Template: Me.dir.get_child("ui").get_child("prefs-box-order-list-empty-placeholder.ui").get_uri()
 }, class PrefsBoxOrderListEmptyPlaceholder extends Gtk.Box {
-    constructor(params = {}) {
-        super(params);
-    }
-
     // Handle a new drop on `this` properly.
     // `value` is the thing getting dropped.
     onDrop(_target, value, _x, _y) {
