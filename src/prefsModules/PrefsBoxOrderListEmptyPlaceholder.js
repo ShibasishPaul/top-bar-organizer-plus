@@ -26,18 +26,7 @@ var PrefsBoxOrderListEmptyPlaceholder = GObject.registerClass({
         ownListBox.insert(value, 0);
 
         /// Finally save the box orders to settings.
-        settings.set_strv(ownListBox.boxOrder, [value.item]);
-
-        let updatedBoxOrder = [ ];
-        for (let potentialListBoxRow of valueListBox) {
-            // Only process PrefsBoxOrderItemRows.
-            if (potentialListBoxRow.constructor.$gtype.name !== "PrefsBoxOrderItemRow") {
-                continue;
-            }
-
-            const item = potentialListBoxRow.item;
-            updatedBoxOrder.push(item);
-        }
-        settings.set_strv(valueListBox.boxOrder, updatedBoxOrder);
+        ownListBox.saveBoxOrderToSettings();
+        valueListBox.saveBoxOrderToSettings();
     }
 });
