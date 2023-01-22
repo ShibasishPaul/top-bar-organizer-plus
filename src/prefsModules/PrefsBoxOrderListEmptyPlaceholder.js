@@ -14,40 +14,34 @@ var PrefsBoxOrderListEmptyPlaceholder = GObject.registerClass({
 }, class PrefsBoxOrderListEmptyPlaceholder extends Gtk.Box {
     constructor(params = {}) {
         super(params);
+    }
 
-        /// Make `this` accept drops by creating a drop target and adding it to
-        /// `this`.
-        let dropTarget = new Gtk.DropTarget();
-        dropTarget.set_gtypes([GObject.type_from_name("PrefsBoxOrderItemRow")]);
-        dropTarget.set_actions(Gdk.DragAction.MOVE);
-        // Handle a new drop on `this` properly.
-        // `value` is the thing getting dropped.
-        dropTarget.connect("drop", (target, value) => {
-            // Get the GtkListBoxes of `this` and the drop value.
-            const ownListBox = this.get_parent();
-            const valueListBox = value.get_parent();
+    // Handle a new drop on `this` properly.
+    // `value` is the thing getting dropped.
+    onDrop(_target, value, _x, _y) {
+        // Get the GtkListBoxes of `this` and the drop value.
+        const ownListBox = this.get_parent();
+        const valueListBox = value.get_parent();
 
-            // Remove the drop value from its list box.
-            valueListBox.remove(value);
+        // Remove the drop value from its list box.
+        valueListBox.remove(value);
 
-            // Insert the drop value into the list box of `this`.
-            ownListBox.insert(value, 0);
+        // Insert the drop value into the list box of `this`.
+        ownListBox.insert(value, 0);
 
-            /// Finally save the box orders to settings.
-            settings.set_strv(ownListBox.boxOrder, [value.item]);
+        /// Finally save the box orders to settings.
+        settings.set_strv(ownListBox.boxOrder, [value.item]);
 
-            let updatedBoxOrder = [ ];
-            for (let potentialListBoxRow of valueListBox) {
-                // Only process PrefsBoxOrderItemRows.
-                if (potentialListBoxRow.constructor.$gtype.name !== "PrefsBoxOrderItemRow") {
-                    continue;
-                }
-
-                const item = potentialListBoxRow.item;
-                updatedBoxOrder.push(item);
+        let updatedBoxOrder = [ ];
+        for (let potentialListBoxRow of valueListBox) {
+            // Only process PrefsBoxOrderItemRows.
+            if (potentialListBoxRow.constructor.$gtype.name !== "PrefsBoxOrderItemRow") {
+                continue;
             }
-            settings.set_strv(valueListBox.boxOrder, updatedBoxOrder);
-        });
-        this.add_controller(dropTarget);
+
+            const item = potentialListBoxRow.item;
+            updatedBoxOrder.push(item);
+        }
+        settings.set_strv(valueListBox.boxOrder, updatedBoxOrder);
     }
 });

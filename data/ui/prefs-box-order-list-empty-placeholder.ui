@@ -19,5 +19,12 @@
                 </child>
             </object>
         </child>
+        <child>
+            <object class="GtkDropTarget">
+                <property name="actions">move</property>
+                <property name="formats">PrefsBoxOrderItemRow</property>
+                <signal name="drop" handler="onDrop"/>
+            </object>
+        </child>
     </template>
 </interface>

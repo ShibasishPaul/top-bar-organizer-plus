@@ -24,5 +24,20 @@
                 </style>
             </object>
         </child>
+        <child>
+            <object class="GtkDragSource">
+                <property name="actions">move</property>
+                <signal name="prepare" handler="onDragPrepare"/>
+                <signal name="drag-begin" handler="onDragBegin"/>
+                <signal name="drag-end" handler="onDragEnd"/>
+            </object>
+        </child>
+        <child>
+            <object class="GtkDropTarget">
+                <property name="actions">move</property>
+                <property name="formats">PrefsBoxOrderItemRow</property>
+                <signal name="drop" handler="onDrop"/>
+            </object>
+        </child>
     </template>
 </interface>
