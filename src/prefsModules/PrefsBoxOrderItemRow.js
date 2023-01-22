@@ -14,15 +14,14 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
     GTypeName: "PrefsBoxOrderItemRow",
     Template: Me.dir.get_child("ui").get_child("prefs-box-order-item-row.ui").get_uri(),
     InternalChildren: [
-        "item-name-display-label",
-        "menu-button"
+        "item-name-display-label"
     ]
 }, class PrefsBoxOrderItemRow extends Adw.ActionRow {
     constructor(params = {}, item) {
         super(params);
 
         this.#associateItem(item);
-        this.#configureMenu();
+        this.#setupActions();
     }
 
     /**
@@ -40,23 +39,22 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
     }
 
     /**
-     * Configure the menu.
+     * Setup actions.
      */
-    #configureMenu() {
-        let menu = new Gio.Menu();
-        menu.append("Forget", `prefsBoxOrderItemRow-${this.item}.forget`);
-        this._menu_button.set_menu_model(menu);
+    #setupActions() {
+        const actionGroup = new Gio.SimpleActionGroup();
 
-        const forgetAction = new Gio.SimpleAction({ name: "forget" });
-        forgetAction.connect("activate", () => {
+        const forgetAction = new Gio.SimpleAction({
+            name: "forget"
+        });
+        forgetAction.connect("activate", (_action, _params) => {
             const parentListBox = this.get_parent();
             parentListBox.remove(this);
             parentListBox.saveBoxOrderToSettings();
-        });
-
-        const actionGroup = new Gio.SimpleActionGroup();
+        })
         actionGroup.add_action(forgetAction);
-        this.insert_action_group(`prefsBoxOrderItemRow-${this.item}`, actionGroup);
+
+        this.insert_action_group(`options`, actionGroup);
     }
 
     onDragPrepare(_source, x, y) {
