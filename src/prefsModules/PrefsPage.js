@@ -22,8 +22,8 @@ var PrefsPage = GObject.registerClass({
         "right-box"
     ]
 }, class PrefsPage extends Adw.PreferencesPage {
-    _init(params = {}) {
-        super._init(params);
+    constructor(params = {}) {
+        super(params);
 
         this._settings = ExtensionUtils.getSettings();
 

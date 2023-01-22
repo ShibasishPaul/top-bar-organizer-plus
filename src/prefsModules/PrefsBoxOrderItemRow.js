@@ -18,8 +18,8 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
         "menu-button"
     ]
 }, class PrefsBoxOrderItemRow extends Adw.ActionRow {
-    _init(params = {}, scrollManager, item) {
-        super._init(params);
+    constructor(params = {}, scrollManager, item) {
+        super(params);
 
         this._associateItem(item);
         this._configureMenu();

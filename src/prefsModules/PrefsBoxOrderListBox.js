@@ -16,8 +16,8 @@ var PrefsBoxOrderListBox = GObject.registerClass({
      * @param {String} boxOrder - The box order this PrefsBoxOrderListBox is
      * associated with.
      */
-    _init(params = {}, boxOrder) {
-        super._init(params);
+    constructor(params = {}, boxOrder) {
+        super(params);
 
         this._settings = ExtensionUtils.getSettings();
 
