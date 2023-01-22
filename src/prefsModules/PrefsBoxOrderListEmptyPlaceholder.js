@@ -34,8 +34,6 @@ var PrefsBoxOrderListEmptyPlaceholder = GObject.registerClass({
             ownListBox.insert(value, 0);
 
             /// Finally save the box orders to settings.
-            const settings = ExtensionUtils.getSettings();
-
             settings.set_strv(ownListBox.boxOrder, [value.item]);
 
             let updatedBoxOrder = [ ];

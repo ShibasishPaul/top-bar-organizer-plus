@@ -19,8 +19,6 @@ var PrefsBoxOrderListBox = GObject.registerClass({
     constructor(params = {}, boxOrder) {
         super(params);
 
-        this._settings = ExtensionUtils.getSettings();
-
         this.boxOrder = boxOrder;
     }
 
@@ -37,6 +35,6 @@ var PrefsBoxOrderListBox = GObject.registerClass({
             const item = potentialPrefsBoxOrderItemRow.item;
             currentBoxOrder.push(item);
         }
-        this._settings.set_strv(this.boxOrder, currentBoxOrder);
+        settings.set_strv(this.boxOrder, currentBoxOrder);
     }
 });

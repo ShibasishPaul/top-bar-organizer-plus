@@ -25,8 +25,6 @@ var PrefsPage = GObject.registerClass({
     constructor(params = {}) {
         super(params);
 
-        this._settings = ExtensionUtils.getSettings();
-
         // Scroll up or down, when a Drag-and-Drop operation is in progress and
         // the user has their cursor either in the upper or lower 10% of this
         // widget respectively.
@@ -73,8 +71,8 @@ var PrefsPage = GObject.registerClass({
             gtkListBox.set_placeholder(new PrefsBoxOrderListEmptyPlaceholder.PrefsBoxOrderListEmptyPlaceholder());
         };
 
-        initializeGtkListBox(this._settings.get_strv("left-box-order"), this._left_box_order);
-        initializeGtkListBox(this._settings.get_strv("center-box-order"), this._center_box_order);
-        initializeGtkListBox(this._settings.get_strv("right-box-order"), this._right_box_order);
+        initializeGtkListBox(settings.get_strv("left-box-order"), this._left_box_order);
+        initializeGtkListBox(settings.get_strv("center-box-order"), this._center_box_order);
+        initializeGtkListBox(settings.get_strv("right-box-order"), this._right_box_order);
     }
 });
