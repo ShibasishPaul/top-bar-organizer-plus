@@ -7,19 +7,50 @@ const GObject = imports.gi.GObject;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
+const PrefsBoxOrderItemRow = Me.imports.prefsModules.PrefsBoxOrderItemRow;
+const PrefsBoxOrderListEmptyPlaceholder = Me.imports.prefsModules.PrefsBoxOrderListEmptyPlaceholder;
+
 var PrefsBoxOrderListBox = GObject.registerClass({
     GTypeName: "PrefsBoxOrderListBox",
-    Template: Me.dir.get_child("ui").get_child("prefs-box-order-list-box.ui").get_uri()
+    Template: Me.dir.get_child("ui").get_child("prefs-box-order-list-box.ui").get_uri(),
+    Properties: {
+        BoxOrder: GObject.ParamSpec.string(
+            "box-order",
+            "Box Order",
+            "The box order this PrefsBoxOrderListBox is associated with.",
+            GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT_ONLY,
+            ""
+        )
+    }
 }, class PrefsBoxOrderListBox extends Gtk.ListBox {
     /**
      * @param {Object} params
-     * @param {String} boxOrder - The box order this PrefsBoxOrderListBox is
-     * associated with.
      */
-    constructor(params = {}, boxOrder) {
+    constructor(params = {}) {
         super(params);
 
-        this.boxOrder = boxOrder;
+        // Add a placeholder widget for the case, where no GtkListBoxRows are
+        // present.
+        this.set_placeholder(new PrefsBoxOrderListEmptyPlaceholder.PrefsBoxOrderListEmptyPlaceholder());
+    }
+
+    get boxOrder() {
+        return this._boxOrder;
+    }
+
+    set boxOrder(value) {
+        this._boxOrder = value;
+
+        // Get the actual box order for the given box order name from settings.
+        const boxOrder = settings.get_strv(this._boxOrder);
+        // Populate this GtkListBox with GtkListBoxRows for the items of the
+        // given configured box order.
+        for (const item of boxOrder) {
+            const listBoxRow = new PrefsBoxOrderItemRow.PrefsBoxOrderItemRow({}, item);
+            this.append(listBoxRow);
+        }
+
+        this.notify("box-order");
     }
 
     /**

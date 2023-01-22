@@ -48,31 +48,5 @@ var PrefsPage = GObject.registerClass({
             scrollManager.stopScrollAll();
         });
         this.add_controller(controller);
-
-        // Add custom GTKListBoxes (PrefsBoxOrderListBoxes).
-        this._left_box_order = new PrefsBoxOrderListBox.PrefsBoxOrderListBox({}, "left-box-order");
-        this._left_box.append(this._left_box_order);
-        this._center_box_order = new PrefsBoxOrderListBox.PrefsBoxOrderListBox({}, "center-box-order");
-        this._center_box.append(this._center_box_order);
-        this._right_box_order = new PrefsBoxOrderListBox.PrefsBoxOrderListBox({}, "right-box-order");
-        this._right_box.append(this._right_box_order);
-
-        // Initialize the given `gtkListBox`.
-        const initializeGtkListBox = (boxOrder, gtkListBox) => {
-            // Add the items of the given configured box order as
-            // GtkListBoxRows.
-            for (const item of boxOrder) {
-                const listBoxRow = new PrefsBoxOrderItemRow.PrefsBoxOrderItemRow({}, item);
-                gtkListBox.append(listBoxRow);
-            }
-
-            // Add a placeholder widget for the case, where `gtkListBox` doesn't
-            // have any GtkListBoxRows.
-            gtkListBox.set_placeholder(new PrefsBoxOrderListEmptyPlaceholder.PrefsBoxOrderListEmptyPlaceholder());
-        };
-
-        initializeGtkListBox(settings.get_strv("left-box-order"), this._left_box_order);
-        initializeGtkListBox(settings.get_strv("center-box-order"), this._center_box_order);
-        initializeGtkListBox(settings.get_strv("right-box-order"), this._right_box_order);
     }
 });
