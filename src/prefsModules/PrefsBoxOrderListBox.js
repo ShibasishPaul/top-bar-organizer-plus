@@ -9,7 +9,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 var PrefsBoxOrderListBox = GObject.registerClass({
     GTypeName: "PrefsBoxOrderListBox",
-    Template: Me.dir.get_child("prefs-box-order-list-box.ui").get_uri()
+    Template: Me.dir.get_child("ui").get_child("prefs-box-order-list-box.ui").get_uri()
 }, class PrefsBoxOrderListBox extends Gtk.ListBox {
     /**
      * @param {Object} params

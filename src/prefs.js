@@ -15,7 +15,7 @@ const ScrollManager = Me.imports.prefsModules.ScrollManager;
 
 var PrefsPage = GObject.registerClass({
     GTypeName: "PrefsPage",
-    Template: Me.dir.get_child("prefs-page.ui").get_uri(),
+    Template: Me.dir.get_child("ui").get_child("prefs-page.ui").get_uri(),
     InternalChildren: [
         "left-box",
         "center-box",

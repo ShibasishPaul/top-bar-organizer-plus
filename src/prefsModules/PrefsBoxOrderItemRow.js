@@ -12,7 +12,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 var PrefsBoxOrderItemRow = GObject.registerClass({
     GTypeName: "PrefsBoxOrderItemRow",
-    Template: Me.dir.get_child("prefs-box-order-item-row.ui").get_uri(),
+    Template: Me.dir.get_child("ui").get_child("prefs-box-order-item-row.ui").get_uri(),
     InternalChildren: [
         "item-name-display-label",
         "menu-button"

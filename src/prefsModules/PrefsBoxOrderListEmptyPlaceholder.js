@@ -10,7 +10,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 var PrefsBoxOrderListEmptyPlaceholder = GObject.registerClass({
     GTypeName: "PrefsBoxOrderListEmptyPlaceholder",
-    Template: Me.dir.get_child("prefs-box-order-list-empty-placeholder.ui").get_uri()
+    Template: Me.dir.get_child("ui").get_child("prefs-box-order-list-empty-placeholder.ui").get_uri()
 }, class PrefsBoxOrderListEmptyPlaceholder extends Gtk.Box {
     _init(params = {}) {
         super._init(params);
