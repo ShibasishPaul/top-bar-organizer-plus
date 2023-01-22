@@ -25,16 +25,16 @@ class Extension {
         // orders.
         this._boxOrderCreator = new BoxOrderCreator.BoxOrderCreator(this._appIndicatorKStatusNotifierItemManager);
 
-        this._addNewItemsToBoxOrders();
-        this._orderTopBarItemsOfAllBoxes();
-        this._overwritePanelAddToPanelBox();
+        this.#addNewItemsToBoxOrders();
+        this.#orderTopBarItemsOfAllBoxes();
+        this.#overwritePanelAddToPanelBox();
 
         // Handle changes of configured box orders.
         this._settingsHandlerIds = [ ];
 
         const addConfiguredBoxOrderChangeHandler = (box) => {
             let handlerId = this.settings.connect(`changed::${box}-box-order`, () => {
-                this._orderTopBarItems(box);
+                this.#orderTopBarItems(box);
 
                 /// For the case, where the currently saved box order is based
                 /// on a permutation of an outdated box order, get an updated
@@ -42,13 +42,13 @@ class Extension {
                 let updatedBoxOrder;
                 switch (box) {
                     case "left":
-                        updatedBoxOrder = this._createUpdatedBoxOrders().left;
+                        updatedBoxOrder = this.#createUpdatedBoxOrders().left;
                         break;
                     case "center":
-                        updatedBoxOrder = this._createUpdatedBoxOrders().center;
+                        updatedBoxOrder = this.#createUpdatedBoxOrders().center;
                         break;
                     case "right":
-                        updatedBoxOrder = this._createUpdatedBoxOrders().right;
+                        updatedBoxOrder = this.#createUpdatedBoxOrders().right;
                         break;
                 }
                 // Only save the updated box order to settings, if it is
@@ -86,8 +86,8 @@ class Extension {
      * This method adds all new items currently present in the Gnome Shell top
      * bar to the box orders.
      */
-    _addNewItemsToBoxOrders() {
-        const boxOrders = this._createUpdatedBoxOrders();
+    #addNewItemsToBoxOrders() {
+        const boxOrders = this.#createUpdatedBoxOrders();
         this.settings.set_strv("left-box-order", boxOrders.left);
         this.settings.set_strv("center-box-order", boxOrders.center);
         this.settings.set_strv("right-box-order", boxOrders.right);
@@ -95,12 +95,12 @@ class Extension {
 
     /**
      * This methods orders the top bar items of all boxes according to the
-     * configured box orders using `this._orderTopBarItems`.
+     * configred box orders using `this.#orderTopBarItems`.
      */
-    _orderTopBarItemsOfAllBoxes() {
-        this._orderTopBarItems("left");
-        this._orderTopBarItems("center");
-        this._orderTopBarItems("right");
+    #orderTopBarItemsOfAllBoxes() {
+        this.#orderTopBarItems("left");
+        this.#orderTopBarItems("center");
+        this.#orderTopBarItems("right");
     }
 
     /**
@@ -115,7 +115,7 @@ class Extension {
      * bar item additions to make sure that they are added in the correct
      * position and box.
      */
-    _overwritePanelAddToPanelBox() {
+    #overwritePanelAddToPanelBox() {
         // Add the original `Panel._addToPanelBox` method as
         // `Panel._originalAddToPanelBox`.
         Panel.Panel.prototype._originalAddToPanelBox = Panel.Panel.prototype._addToPanelBox;
@@ -301,7 +301,7 @@ class Extension {
      * bar to the correct box order and returns the new box orders.
      * @returns {BoxOrders} - The updated box orders.
      */
-    _createUpdatedBoxOrders() {
+    #createUpdatedBoxOrders() {
         // Load the configured box orders from settings.
         const boxOrders = {
             left: this.settings.get_strv("left-box-order"),
@@ -370,7 +370,7 @@ class Extension {
      * the configured box orders.
      * @param {string} box - The box to order.
      */
-    _orderTopBarItems(box) {
+    #orderTopBarItems(box) {
         // Get the valid box order.
         const validBoxOrder = this._boxOrderCreator.createValidBoxOrder(box);
 

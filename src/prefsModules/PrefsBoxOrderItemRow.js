@@ -21,15 +21,15 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
     constructor(params = {}, item) {
         super(params);
 
-        this._associateItem(item);
-        this._configureMenu();
+        this.#associateItem(item);
+        this.#configureMenu();
     }
 
     /**
      * Associate `this` with an item.
      * @param {String} item
      */
-    _associateItem(item) {
+    #associateItem(item) {
         this.item = item;
 
         // Set `this._item_name_display_label` to something nicer, if the
@@ -42,7 +42,7 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
     /**
      * Configure the menu.
      */
-    _configureMenu() {
+    #configureMenu() {
         let menu = new Gio.Menu();
         menu.append("Forget", `prefsBoxOrderItemRow-${this.item}.forget`);
         this._menu_button.set_menu_model(menu);
