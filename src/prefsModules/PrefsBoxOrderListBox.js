@@ -1,5 +1,6 @@
 "use strict";
 /* exported PrefsBoxOrderListBox */
+/* global settings */
 
 const Gtk = imports.gi.Gtk;
 const GObject = imports.gi.GObject;

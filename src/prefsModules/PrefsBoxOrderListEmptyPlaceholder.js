@@ -2,7 +2,6 @@
 /* exported PrefsBoxOrderListEmptyPlaceholder */
 
 const Gtk = imports.gi.Gtk;
-const Gdk = imports.gi.Gdk;
 const GObject = imports.gi.GObject;
 
 const ExtensionUtils = imports.misc.extensionUtils;

@@ -8,10 +8,11 @@ const Adw = imports.gi.Adw;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-const PrefsBoxOrderListBox = Me.imports.prefsModules.PrefsBoxOrderListBox;
-const PrefsBoxOrderListEmptyPlaceholder = Me.imports.prefsModules.PrefsBoxOrderListEmptyPlaceholder;
-const PrefsBoxOrderItemRow = Me.imports.prefsModules.PrefsBoxOrderItemRow;
 const ScrollManager = Me.imports.prefsModules.ScrollManager;
+
+// Imports to make UI file work.
+/* exported PrefsBoxOrderListBox */
+const PrefsBoxOrderListBox = Me.imports.prefsModules.PrefsBoxOrderListBox;
 
 var PrefsPage = GObject.registerClass({
     GTypeName: "PrefsPage",
@@ -56,7 +57,7 @@ var PrefsPage = GObject.registerClass({
         const stopScrollAllAtDNDEnd = () => {
             this._scrollManager.stopScrollAll();
             this._dndEnded = true;
-        }
+        };
         controller.connect("leave", () => {
             stopScrollAllAtDNDEnd();
         });

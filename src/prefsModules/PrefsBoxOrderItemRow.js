@@ -51,10 +51,10 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
             const parentListBox = this.get_parent();
             parentListBox.remove(this);
             parentListBox.saveBoxOrderToSettings();
-        })
+        });
         actionGroup.add_action(forgetAction);
 
-        this.insert_action_group(`options`, actionGroup);
+        this.insert_action_group("options", actionGroup);
     }
 
     onDragPrepare(_source, x, y) {
@@ -72,7 +72,7 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
         let allocation = this.get_allocation();
         dragWidget.set_size_request(allocation.width, allocation.height);
 
-        let dragPrefsBoxOrderItemRow = new PrefsBoxOrderItemRow({}, this.item)
+        let dragPrefsBoxOrderItemRow = new PrefsBoxOrderItemRow({}, this.item);
         dragWidget.append(dragPrefsBoxOrderItemRow);
         dragWidget.drag_highlight_row(dragPrefsBoxOrderItemRow);
 
