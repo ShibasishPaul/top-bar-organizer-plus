@@ -31,7 +31,6 @@
                 <property name="actions">move</property>
                 <signal name="prepare" handler="onDragPrepare"/>
                 <signal name="drag-begin" handler="onDragBegin"/>
-                <signal name="drag-end" handler="onDragEnd"/>
             </object>
         </child>
         <child>

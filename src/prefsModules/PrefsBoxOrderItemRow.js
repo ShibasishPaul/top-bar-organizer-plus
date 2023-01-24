@@ -81,11 +81,6 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
         drag.set_hotspot(this._drag_starting_point_x, this._drag_starting_point_y);
     }
 
-    onDragEnd() {
-        // Stop all scrolling, which is due to this DND operation.
-        scrollManager.stopScrollAll();
-    }
-
     // Handle a new drop on `this` properly.
     // `value` is the thing getting dropped.
     onDrop(_target, value, _x, _y) {

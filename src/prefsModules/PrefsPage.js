@@ -20,28 +20,64 @@ var PrefsPage = GObject.registerClass({
     constructor(params = {}) {
         super(params);
 
-        // Scroll up or down, when a Drag-and-Drop operation is in progress and
-        // the user has their cursor either in the upper or lower 10% of this
-        // widget respectively.
+        this.#setupDNDScroll();
+    }
+
+    /**
+     * This function sets up Drag-and-Drop scrolling.
+     * This means that scroll up or down is happening when a Drag-and-Drop
+     * operation is in progress and the user has their cursor either in the
+     * upper or lower 10% of this widget respectively.
+     */
+    #setupDNDScroll() {
         // Pass `this.get_first_child()` to the ScrollManager, since this
         // `PrefsPage` extends an `Adw.PreferencesPage` and the first child of
         // an `Adw.PreferencesPage` is the built-in `Gtk.ScrolledWindow`.
-        globalThis.scrollManager = new ScrollManager.ScrollManager(this.get_first_child());
+        this._scrollManager = new ScrollManager.ScrollManager(this.get_first_child());
+
+        /// Setup GtkDropControllerMotion event controller and make use of its
+        /// events.
         let controller = new Gtk.DropControllerMotion();
-        controller.connect("motion", (_, x, y) => {
+
+        // Scroll, when the pointer is in the right places.
+        controller.connect("motion", (_, _x, y) => {
             // If the pointer is currently in the upper ten percent of this
             // widget, then scroll up.
-            if (y <= this.get_allocated_height() * 0.1) scrollManager.startScrollUp();
+            if (y <= this.get_allocated_height() * 0.1) this._scrollManager.startScrollUp();
             // If the pointer is currently in the lower ten percent of this
             // widget, then scroll down.
-            else if (y >= this.get_allocated_height() * 0.9) scrollManager.startScrollDown();
+            else if (y >= this.get_allocated_height() * 0.9) this._scrollManager.startScrollDown();
             // Otherwise stop scrolling.
-            else scrollManager.stopScrollAll();
+            else this._scrollManager.stopScrollAll();
         });
+
+        // Make sure scrolling stops, when DND operation ends.
+        this._dndEnded = true;
+        const stopScrollAllAtDNDEnd = () => {
+            this._scrollManager.stopScrollAll();
+            this._dndEnded = true;
+        }
         controller.connect("leave", () => {
-            // Stop scrolling on leave.
-            scrollManager.stopScrollAll();
+            stopScrollAllAtDNDEnd();
         });
+        controller.connect("enter", () => {
+            // Make use of `this._dndEnded` to setup stopScrollAtDNDEnd only
+            // once per DND operation.
+            if (this._dndEnded) {
+                let drag = controller.get_drop().get_drag();
+                drag.connect("drop-performed", () => {
+                    stopScrollAllAtDNDEnd();
+                });
+                drag.connect("dnd-finished", () => {
+                    stopScrollAllAtDNDEnd();
+                });
+                drag.connect("cancel", () => {
+                    stopScrollAllAtDNDEnd();
+                });
+                this._dndEnded = false;
+            }
+        });
+
         this.add_controller(controller);
     }
 });
