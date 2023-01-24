@@ -1,5 +1,5 @@
-/* exported init */
 "use strict";
+/* exported init */
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();

@@ -1,5 +1,5 @@
-/* exported PrefsBoxOrderItemRow */
 "use strict";
+/* exported PrefsBoxOrderItemRow */
 
 const Gtk = imports.gi.Gtk;
 const Gdk = imports.gi.Gdk;

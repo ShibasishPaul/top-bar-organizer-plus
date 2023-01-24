@@ -1,5 +1,5 @@
-/* exported PrefsBoxOrderListEmptyPlaceholder */
 "use strict";
+/* exported PrefsBoxOrderListEmptyPlaceholder */
 
 const Gtk = imports.gi.Gtk;
 const Gdk = imports.gi.Gdk;

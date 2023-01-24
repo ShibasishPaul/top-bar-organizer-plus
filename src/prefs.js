@@ -1,5 +1,5 @@
-/* exported buildPrefsWidget, init */
 "use strict";
+/* exported buildPrefsWidget, init */
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();

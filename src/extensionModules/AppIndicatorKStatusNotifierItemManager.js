@@ -1,5 +1,5 @@
-/* exported AppIndicatorKStatusNotifierItemManager */
 "use strict";
+/* exported AppIndicatorKStatusNotifierItemManager */
 
 var AppIndicatorKStatusNotifierItemManager = class AppIndicatorKStatusNotifierItemManager {
     constructor() {

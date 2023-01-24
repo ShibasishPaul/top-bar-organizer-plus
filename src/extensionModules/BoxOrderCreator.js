@@ -1,5 +1,5 @@
-/* exported BoxOrderCreator */
 "use strict";
+/* exported BoxOrderCreator */
 
 const ExtensionUtils = imports.misc.extensionUtils;
 
