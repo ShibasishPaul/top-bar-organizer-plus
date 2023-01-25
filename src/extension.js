@@ -76,6 +76,8 @@ class Extension {
         for (const handlerId of this._settingsHandlerIds) {
             this.settings.disconnect(handlerId);
         }
+
+        this.settings = null;
     }
 
     ////////////////////////////////////////////////////////////////////////////
