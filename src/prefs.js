@@ -11,6 +11,4 @@ function buildPrefsWidget() {
 }
 
 function init() {
-    // Load the settings.
-    globalThis.settings = ExtensionUtils.getSettings();
 }

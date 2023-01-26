@@ -1,6 +1,5 @@
 "use strict";
 /* exported PrefsBoxOrderListBox */
-/* global settings */
 
 const Gtk = imports.gi.Gtk;
 const GObject = imports.gi.GObject;
@@ -30,6 +29,9 @@ var PrefsBoxOrderListBox = GObject.registerClass({
     constructor(params = {}) {
         super(params);
 
+        // Load the settings.
+        this._settings = ExtensionUtils.getSettings();
+
         // Add a placeholder widget for the case, where no GtkListBoxRows are
         // present.
         this.set_placeholder(new PrefsBoxOrderListEmptyPlaceholder.PrefsBoxOrderListEmptyPlaceholder());
@@ -42,6 +44,9 @@ var PrefsBoxOrderListBox = GObject.registerClass({
     set boxOrder(value) {
         this._boxOrder = value;
 
+        // Load the settings here as well, since a `CONSTRUCT_ONLY` property
+        // apparently can't access `this._settings`.
+        const settings = ExtensionUtils.getSettings();
         // Get the actual box order for the given box order name from settings.
         const boxOrder = settings.get_strv(this._boxOrder);
         // Populate this GtkListBox with GtkListBoxRows for the items of the
@@ -67,6 +72,6 @@ var PrefsBoxOrderListBox = GObject.registerClass({
             const item = potentialPrefsBoxOrderItemRow.item;
             currentBoxOrder.push(item);
         }
-        settings.set_strv(this.boxOrder, currentBoxOrder);
+        this._settings.set_strv(this.boxOrder, currentBoxOrder);
     }
 });
