@@ -8,7 +8,7 @@ const Main = imports.ui.main;
 const Panel = imports.ui.panel;
 
 const AppIndicatorKStatusNotifierItemManager = Me.imports.extensionModules.AppIndicatorKStatusNotifierItemManager;
-const BoxOrderCreator = Me.imports.extensionModules.BoxOrderCreator;
+const BoxOrderManager = Me.imports.extensionModules.BoxOrderManager;
 
 class Extension {
     constructor() {
@@ -21,12 +21,13 @@ class Extension {
         // handle AppIndicator/KStatusNotifierItem items.
         this._appIndicatorKStatusNotifierItemManager = new AppIndicatorKStatusNotifierItemManager.AppIndicatorKStatusNotifierItemManager();
 
-        // Create an instance of BoxOrderCreator for the creation of special box
-        // orders.
-        this._boxOrderCreator = new BoxOrderCreator.BoxOrderCreator(this._appIndicatorKStatusNotifierItemManager);
+        this._boxOrderManager = new BoxOrderManager.BoxOrderManager(this._appIndicatorKStatusNotifierItemManager);
 
-        this.#addNewItemsToBoxOrders();
-        this.#orderTopBarItemsOfAllBoxes();
+        // Stuff to do on startup(extension enable).
+        this._boxOrderManager.saveNewTopBarItems();
+        this.#orderTopBarItems("left");
+        this.#orderTopBarItems("center");
+        this.#orderTopBarItems("right");
         this.#overwritePanelAddToPanelBox();
 
         // Handle changes of configured box orders.
@@ -36,27 +37,10 @@ class Extension {
             let handlerId = this.settings.connect(`changed::${box}-box-order`, () => {
                 this.#orderTopBarItems(box);
 
-                /// For the case, where the currently saved box order is based
-                /// on a permutation of an outdated box order, get an updated
-                /// box order and save it, if needed.
-                let updatedBoxOrder;
-                switch (box) {
-                    case "left":
-                        updatedBoxOrder = this.#createUpdatedBoxOrders().left;
-                        break;
-                    case "center":
-                        updatedBoxOrder = this.#createUpdatedBoxOrders().center;
-                        break;
-                    case "right":
-                        updatedBoxOrder = this.#createUpdatedBoxOrders().right;
-                        break;
-                }
-                // Only save the updated box order to settings, if it is
-                // different, to avoid looping.
-                const currentBoxOrder = this.settings.get_strv(`${box}-box-order`);
-                if (JSON.stringify(currentBoxOrder) !== JSON.stringify(updatedBoxOrder)) {
-                    this.settings.set_strv(`${box}-box-order`, updatedBoxOrder);
-                }
+                // For the case, where the currently saved box order is based on
+                // a permutation of an outdated box order, save new top bar
+                // items.
+                this._boxOrderManager.saveNewTopBarItems();
             });
             this._settingsHandlerIds.push(handlerId);
         };
@@ -83,27 +67,6 @@ class Extension {
     ////////////////////////////////////////////////////////////////////////////
     /// Methods used on extension enable.                                    ///
     ////////////////////////////////////////////////////////////////////////////
-
-    /**
-     * This method adds all new items currently present in the Gnome Shell top
-     * bar to the box orders.
-     */
-    #addNewItemsToBoxOrders() {
-        const boxOrders = this.#createUpdatedBoxOrders();
-        this.settings.set_strv("left-box-order", boxOrders.left);
-        this.settings.set_strv("center-box-order", boxOrders.center);
-        this.settings.set_strv("right-box-order", boxOrders.right);
-    }
-
-    /**
-     * This methods orders the top bar items of all boxes according to the
-     * configred box orders using `this.#orderTopBarItems`.
-     */
-    #orderTopBarItemsOfAllBoxes() {
-        this.#orderTopBarItems("left");
-        this.#orderTopBarItems("center");
-        this.#orderTopBarItems("right");
-    }
 
     /**
      * An object containing a position and box overwrite.
@@ -170,7 +133,7 @@ class Extension {
                 right: this._appIndicatorKStatusNotifierItemManager.createResolvedBoxOrder(this.settings.get_strv("right-box-order")),
             };
             // Also get the restricted valid box order of the target box.
-            const restrictedValidBoxOrderOfTargetBox = this._boxOrderCreator.createRestrictedValidBoxOrder(box);
+            const restrictedValidBoxOrderOfTargetBox = this._boxOrderManager.createRestrictedValidBoxOrder(box);
 
             // Get the index of the role for each box order.
             const indices = {
@@ -239,21 +202,21 @@ class Extension {
 
             if (indices.left !== -1) {
                 return {
-                    position: determineInsertionIndex(indices.left, this._boxOrderCreator.createRestrictedValidBoxOrder("left"), resolvedBoxOrders.left),
+                    position: determineInsertionIndex(indices.left, this._boxOrderManager.createRestrictedValidBoxOrder("left"), resolvedBoxOrders.left),
                     box: "left"
                 };
             }
 
             if (indices.center !== -1) {
                 return {
-                    position: determineInsertionIndex(indices.center, this._boxOrderCreator.createRestrictedValidBoxOrder("center"), resolvedBoxOrders.center),
+                    position: determineInsertionIndex(indices.center, this._boxOrderManager.createRestrictedValidBoxOrder("center"), resolvedBoxOrders.center),
                     box: "center"
                 };
             }
 
             if (indices.right !== -1) {
                 return {
-                    position: determineInsertionIndex(indices.right, this._boxOrderCreator.createRestrictedValidBoxOrder("right"), resolvedBoxOrders.right),
+                    position: determineInsertionIndex(indices.right, this._boxOrderManager.createRestrictedValidBoxOrder("right"), resolvedBoxOrders.right),
                     box: "right"
                 };
             }
@@ -306,82 +269,13 @@ class Extension {
      */
 
     /**
-     * This method adds all new items currently present in the Gnome Shell top
-     * bar to the correct box order and returns the new box orders.
-     * @returns {BoxOrders} - The updated box orders.
-     */
-    #createUpdatedBoxOrders() {
-        // Load the configured box orders from settings.
-        const boxOrders = {
-            left: this.settings.get_strv("left-box-order"),
-            center: this.settings.get_strv("center-box-order"),
-            right: this.settings.get_strv("right-box-order"),
-        };
-
-        // Get items (or rather their roles) currently present in the Gnome
-        // Shell top bar and index them using their associated indicator
-        // container.
-        let indicatorContainerRoleMap = new Map();
-        for (const role in Main.panel.statusArea) {
-            indicatorContainerRoleMap.set(Main.panel.statusArea[role].container, role);
-        }
-
-        // Get the indicator containers (of the items) currently present in the
-        // Gnome Shell top bar boxes.
-        const boxOrderIndicatorContainers = {
-            left: Main.panel._leftBox.get_children(),
-            center: Main.panel._centerBox.get_children(),
-            // Reverse this array, since the items in the left and center box
-            // are logically LTR, while the items in the right box are RTL.
-            right: Main.panel._rightBox.get_children().reverse()
-        };
-
-        // This function goes through the items (or rather their indicator
-        // containers) of the given box and adds new items (or rather their
-        // roles) to the box order.
-        const addNewItemsToBoxOrder = (boxIndicatorContainers, boxOrder, box) => {
-            for (const indicatorContainer of boxIndicatorContainers) {
-                // First get the role associated with the current indicator
-                // container.
-                const associatedRole = indicatorContainerRoleMap.get(indicatorContainer);
-                if (!associatedRole) continue;
-
-                // Handle an AppIndicator/KStatusNotifierItem item differently.
-                if (associatedRole.startsWith("appindicator-")) {
-                    this._appIndicatorKStatusNotifierItemManager.handleAppIndicatorKStatusNotifierItemItem(indicatorContainer, associatedRole, boxOrder, boxOrders, box === "right");
-                    continue;
-                }
-
-                // Add the role to the box order, if it isn't in in one already.
-                if (!boxOrders.left.includes(associatedRole)
-                    && !boxOrders.center.includes(associatedRole)
-                    && !boxOrders.right.includes(associatedRole)) {
-                    if (box === "right") {
-                        // Add the items to the beginning for this array, since
-                        // its RTL.
-                        boxOrder.unshift(associatedRole);
-                    } else {
-                        boxOrder.push(associatedRole);
-                    }
-                }
-            }
-        };
-
-        addNewItemsToBoxOrder(boxOrderIndicatorContainers.left, boxOrders.left, "left");
-        addNewItemsToBoxOrder(boxOrderIndicatorContainers.center, boxOrders.center, "center");
-        addNewItemsToBoxOrder(boxOrderIndicatorContainers.right, boxOrders.right, "right");
-
-        return boxOrders;
-    }
-
-    /**
      * This method orders the top bar items of the specified box according to
      * the configured box orders.
      * @param {string} box - The box to order.
      */
     #orderTopBarItems(box) {
         // Get the valid box order.
-        const validBoxOrder = this._boxOrderCreator.createValidBoxOrder(box);
+        const validBoxOrder = this._boxOrderManager.createValidBoxOrder(box);
 
         // Get the relevant box of `Main.panel`.
         let panelBox;
