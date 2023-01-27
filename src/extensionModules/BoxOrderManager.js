@@ -77,55 +77,6 @@ var BoxOrderManager = class BoxOrderManager {
     }
 
     /**
-     * This method returns a restricted valid box order for the given top bar
-     * box.
-     * This means it returns a box order, where only roles are included, which
-     * have their associated indicator container already in the specified box.
-     * @param {string} box - The box to return the valid box order for.
-     * Must be one of the following values:
-     * - "left"
-     * - "center"
-     * - "right"
-     * @returns {string[]} - The restricted valid box order.
-     */
-    createRestrictedValidBoxOrder(box) {
-        // Get a resolved box order.
-        let boxOrder = this._appIndicatorKStatusNotifierItemManager.createResolvedBoxOrder(this._settings.get_strv(`${box}-box-order`));
-
-        // Get the indicator containers (of the items), which are currently
-        // present the in specified Gnome Shell top bar box.
-        let indicatorContainers;
-        switch (box) {
-            case "left":
-                indicatorContainers = Main.panel._leftBox.get_children();
-                break;
-            case "center":
-                indicatorContainers = Main.panel._centerBox.get_children();
-                break;
-            case "right":
-                indicatorContainers = Main.panel._rightBox.get_children();
-                break;
-        }
-
-        // Create an indicator container set from the indicator containers for
-        // fast easy access.
-        const indicatorContainerSet = new Set(indicatorContainers);
-
-        // Go through the box order and only add items to the restricted valid
-        // box order, where their indicator is present in the specified Gnome
-        // Shell top bar box.
-        let restrictedValidBoxOrder = [ ];
-        for (const role of boxOrder) {
-            // Get the indicator container associated with the current role.
-            const associatedIndicatorContainer = Main.panel.statusArea[role]?.container;
-
-            if (indicatorContainerSet.has(associatedIndicatorContainer)) restrictedValidBoxOrder.push(role);
-        }
-
-        return restrictedValidBoxOrder;
-    }
-
-    /**
      * This method saves all new items currently present in the Gnome Shell top
      * bar to the correct box orders.
      */

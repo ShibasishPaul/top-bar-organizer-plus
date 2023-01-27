@@ -76,182 +76,33 @@ class Extension {
      */
 
     /**
-     * Overwrite `Panel._addToPanelBox` with a custom method, which handles top
-     * bar item additions to make sure that they are added in the correct
-     * position and box.
+     * Overwrite `Panel._addToPanelBox` with a custom method, which simply calls
+     * the original one and orders the top bar and handles new items afterwards.
      */
     #overwritePanelAddToPanelBox() {
         // Add the original `Panel._addToPanelBox` method as
         // `Panel._originalAddToPanelBox`.
         Panel.Panel.prototype._originalAddToPanelBox = Panel.Panel.prototype._addToPanelBox;
 
-        // This function gets used by the `Panel._addToPanelBox` overwrite to
-        // determine the position and box for a new item.
-        // It also adds the new item to the relevant box order, if it isn't in
-        // it already.
-        const getPositionAndBoxOverwrite = (role, box, indicator) => {
-            const boxOrders = {
-                left: this.settings.get_strv("left-box-order"),
-                center: this.settings.get_strv("center-box-order"),
-                right: this.settings.get_strv("right-box-order"),
-            };
-            let boxOrder;
-
-            // Handle the case where the new item is a
-            // AppIndicator/KStatusNotifierItem.
-            // Note: This code is currently broken, since the extension
-            // providing AppIndicator/KStatusNotifierItems
-            // (appindicatorsupport@rgcjonas.gmail.com) doesn't give us an id on
-            // addition anymore and therefore we don't know which program/id the
-            // AppIndicator/KStatusNotifierItem belongs to.
-            // So just throw an error for now.
-            if (role.startsWith("appindicator-")) {
-                throw new Error("AppIndicator/KStatusNotifierItem addition is currently broken.");
-                // switch (box) {
-                //     case "left":
-                //         boxOrder = this.settings.get_strv("left-box-order");
-                //         this._appIndicatorKStatusNotifierItemManager.handleAppIndicatorKStatusNotifierItemItem(indicator.container, role, boxOrder, boxOrders);
-                //         this.settings.set_strv("left-box-order", boxOrder);
-                //         break;
-                //     case "center":
-                //         boxOrder = this.settings.get_strv("center-box-order");
-                //         this._appIndicatorKStatusNotifierItemManager.handleAppIndicatorKStatusNotifierItemItem(indicator.container, role, boxOrder, boxOrders);
-                //         this.settings.set_strv("center-box-order", boxOrder);
-                //         break;
-                //     case "right":
-                //         boxOrder = this.settings.get_strv("right-box-order");
-                //         this._appIndicatorKStatusNotifierItemManager.handleAppIndicatorKStatusNotifierItemItem(indicator.container, role, boxOrder, boxOrders, true);
-                //         this.settings.set_strv("right-box-order", boxOrder);
-                //         break;
-                // }
-            }
-
-            // Get the resolved box orders for all boxes.
-            const resolvedBoxOrders = {
-                left: this._appIndicatorKStatusNotifierItemManager.createResolvedBoxOrder(this.settings.get_strv("left-box-order")),
-                center: this._appIndicatorKStatusNotifierItemManager.createResolvedBoxOrder(this.settings.get_strv("center-box-order")),
-                right: this._appIndicatorKStatusNotifierItemManager.createResolvedBoxOrder(this.settings.get_strv("right-box-order")),
-            };
-            // Also get the restricted valid box order of the target box.
-            const restrictedValidBoxOrderOfTargetBox = this._boxOrderManager.createRestrictedValidBoxOrder(box);
-
-            // Get the index of the role for each box order.
-            const indices = {
-                left: resolvedBoxOrders.left.indexOf(role),
-                center: resolvedBoxOrders.center.indexOf(role),
-                right: resolvedBoxOrders.right.indexOf(role),
-            };
-
-            // If the role is not already configured in one of the box orders,
-            // just add it to the target box order at the end/beginning, save
-            // the updated box order and return the relevant position and box.
-            if (indices.left === -1
-                && indices.center === -1
-                && indices.right === -1) {
-                switch (box) {
-                    // For the left and center box, insert the role at the end,
-                    // since they're LTR.
-                    case "left":
-                        boxOrders["left"].push(role);
-                        this.settings.set_strv("left-box-order", boxOrders["left"]);
-                        return {
-                            position: restrictedValidBoxOrderOfTargetBox.length - 1,
-                            box: box
-                        };
-                    case "center":
-                        boxOrders["center"].push(role);
-                        this.settings.set_strv("center-box-order", boxOrders["center"]);
-                        return {
-                            position: restrictedValidBoxOrderOfTargetBox.length - 1,
-                            box: box
-                        };
-                    // For the right box, insert the role at the beginning,
-                    // since it's RTL.
-                    case "right":
-                        boxOrders["right"].unshift(role);
-                        this.settings.set_strv("right-box-order", boxOrders["right"]);
-                        return {
-                            position: 0,
-                            box: box
-                        };
-                }
-            }
-
-            /// Since the role is already configured in one of the box orders,
-            /// determine the correct insertion index for the position.
-            const determineInsertionIndex = (index, restrictedValidBoxOrder, boxOrder) => {
-                // Set the insertion index initially to 0, so that if no closest
-                // item can be found, the new item just gets inserted at the
-                // beginning.
-                let insertionIndex = 0;
-
-                // Find the index of the closest item, which is also in the
-                // valid box order and before the new item.
-                // This way, we can insert the new item just after the index of
-                // this closest item.
-                for (let i = index - 1; i >= 0; i--) {
-                    let potentialClosestItemIndex = restrictedValidBoxOrder.indexOf(boxOrder[i]);
-                    if (potentialClosestItemIndex !== -1) {
-                        insertionIndex = potentialClosestItemIndex + 1;
-                        break;
-                    }
-                }
-
-                return insertionIndex;
-            };
-
-            if (indices.left !== -1) {
-                return {
-                    position: determineInsertionIndex(indices.left, this._boxOrderManager.createRestrictedValidBoxOrder("left"), resolvedBoxOrders.left),
-                    box: "left"
-                };
-            }
-
-            if (indices.center !== -1) {
-                return {
-                    position: determineInsertionIndex(indices.center, this._boxOrderManager.createRestrictedValidBoxOrder("center"), resolvedBoxOrders.center),
-                    box: "center"
-                };
-            }
-
-            if (indices.right !== -1) {
-                return {
-                    position: determineInsertionIndex(indices.right, this._boxOrderManager.createRestrictedValidBoxOrder("right"), resolvedBoxOrders.right),
-                    box: "right"
-                };
-            }
+        const orderTopBarAndHandleNewItems = () => {
+            this.#orderTopBarItems("left");
+            this.#orderTopBarItems("center");
+            this.#orderTopBarItems("right");
+            this._boxOrderManager.saveNewTopBarItems();
         };
 
         // Overwrite `Panel._addToPanelBox`.
         Panel.Panel.prototype._addToPanelBox = function (role, indicator, position, box) {
-            // Get the position and box overwrite.
-            let positionBoxOverwrite;
-            switch (box) {
-                case this._leftBox:
-                    positionBoxOverwrite = getPositionAndBoxOverwrite(role, "left", indicator);
-                    break;
-                case this._centerBox:
-                    positionBoxOverwrite = getPositionAndBoxOverwrite(role, "center", indicator);
-                    break;
-                case this._rightBox:
-                    positionBoxOverwrite = getPositionAndBoxOverwrite(role, "right", indicator);
-                    break;
+            // Handle the case where the new item is a
+            // AppIndicator/KStatusNotifierItem.
+            if (role.startsWith("appindicator-")) {
+                // Just throw an error for now.
+                throw new Error("AppIndicator/KStatusNotifierItem addition is currently broken/not implemented.");
             }
-
-            // Call the original `Panel._addToPanelBox` with the position
-            // overwrite as the position argument and the box determined by the
-            // box overwrite as the box argument.
-            switch (positionBoxOverwrite.box) {
-                case "left":
-                    this._originalAddToPanelBox(role, indicator, positionBoxOverwrite.position, Main.panel._leftBox);
-                    break;
-                case "center":
-                    this._originalAddToPanelBox(role, indicator, positionBoxOverwrite.position, Main.panel._centerBox);
-                    break;
-                case "right":
-                    this._originalAddToPanelBox(role, indicator, positionBoxOverwrite.position, Main.panel._rightBox);
-                    break;
-            }
+            // Simply call the original `_addToPanelBox` and order the top bar
+            // and handle new items afterwards.
+            this._originalAddToPanelBox(role, indicator, position, box);
+            orderTopBarAndHandleNewItems();
         };
     }
 
