@@ -136,24 +136,31 @@ class Extension {
 
             // Handle the case where the new item is a
             // AppIndicator/KStatusNotifierItem.
+            // Note: This code is currently broken, since the extension
+            // providing AppIndicator/KStatusNotifierItems
+            // (appindicatorsupport@rgcjonas.gmail.com) doesn't give us an id on
+            // addition anymore and therefore we don't know which program/id the
+            // AppIndicator/KStatusNotifierItem belongs to.
+            // So just throw an error for now.
             if (role.startsWith("appindicator-")) {
-                switch (box) {
-                    case "left":
-                        boxOrder = this.settings.get_strv("left-box-order");
-                        this._appIndicatorKStatusNotifierItemManager.handleAppIndicatorKStatusNotifierItemItem(indicator.container, role, boxOrder, boxOrders);
-                        this.settings.set_strv("left-box-order", boxOrder);
-                        break;
-                    case "center":
-                        boxOrder = this.settings.get_strv("center-box-order");
-                        this._appIndicatorKStatusNotifierItemManager.handleAppIndicatorKStatusNotifierItemItem(indicator.container, role, boxOrder, boxOrders);
-                        this.settings.set_strv("center-box-order", boxOrder);
-                        break;
-                    case "right":
-                        boxOrder = this.settings.get_strv("right-box-order");
-                        this._appIndicatorKStatusNotifierItemManager.handleAppIndicatorKStatusNotifierItemItem(indicator.container, role, boxOrder, boxOrders, true);
-                        this.settings.set_strv("right-box-order", boxOrder);
-                        break;
-                }
+                throw new Error("AppIndicator/KStatusNotifierItem addition is currently broken.");
+                // switch (box) {
+                //     case "left":
+                //         boxOrder = this.settings.get_strv("left-box-order");
+                //         this._appIndicatorKStatusNotifierItemManager.handleAppIndicatorKStatusNotifierItemItem(indicator.container, role, boxOrder, boxOrders);
+                //         this.settings.set_strv("left-box-order", boxOrder);
+                //         break;
+                //     case "center":
+                //         boxOrder = this.settings.get_strv("center-box-order");
+                //         this._appIndicatorKStatusNotifierItemManager.handleAppIndicatorKStatusNotifierItemItem(indicator.container, role, boxOrder, boxOrders);
+                //         this.settings.set_strv("center-box-order", boxOrder);
+                //         break;
+                //     case "right":
+                //         boxOrder = this.settings.get_strv("right-box-order");
+                //         this._appIndicatorKStatusNotifierItemManager.handleAppIndicatorKStatusNotifierItemItem(indicator.container, role, boxOrder, boxOrders, true);
+                //         this.settings.set_strv("right-box-order", boxOrder);
+                //         break;
+                // }
             }
 
             // Get the resolved box orders for all boxes.
