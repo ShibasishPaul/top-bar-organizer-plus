@@ -18,29 +18,28 @@ class Extension {
 
         this._boxOrderManager = new BoxOrderManager.BoxOrderManager();
 
-        // Stuff to do on startup(extension enable).
+        /// Stuff to do on startup(extension enable).
+        // Initially handle new top bar items and order top bar boxes.
         this.#handleNewItemsAndOrderTopBar();
+
+        // Overwrite `Panel._addToPanelBox` method with one handling new items
+        // and also handle AppIndicators getting ready, to handle new items.
         this.#overwritePanelAddToPanelBox();
+        this._boxOrderManager.connect("appIndicatorReady", () => {
+            this.#handleNewItemsAndOrderTopBar();
+        });
 
         // Handle changes of configured box orders.
         this._settingsHandlerIds = [];
-
         const addConfiguredBoxOrderChangeHandler = (box) => {
             let handlerId = this.settings.connect(`changed::${box}-box-order`, () => {
                 this.#handleNewItemsAndOrderTopBar();
             });
             this._settingsHandlerIds.push(handlerId);
         };
-
         addConfiguredBoxOrderChangeHandler("left");
         addConfiguredBoxOrderChangeHandler("center");
         addConfiguredBoxOrderChangeHandler("right");
-
-        // Handle AppIndicators getting ready.
-        this._boxOrderManager.connect("appIndicatorReady", () => {
-            this.#handleNewItemsAndOrderTopBar();
-        });
-
     }
 
     disable() {
