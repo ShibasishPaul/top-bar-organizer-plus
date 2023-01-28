@@ -27,13 +27,17 @@ var BoxOrderManager = GObject.registerClass({
         "appIndicatorReady": {}
     }
 }, class BoxOrderManager extends GObject.Object {
+    #appIndicatorReadyHandlerIdMap;
+    #appIndicatorItemApplicationRoleMap;
+    #settings;
+
     constructor(params = {}) {
         super(params);
 
-        this._appIndicatorReadyHandlerIdMap = new Map();
-        this._appIndicatorItemApplicationRoleMap = new Map();
+        this.#appIndicatorReadyHandlerIdMap = new Map();
+        this.#appIndicatorItemApplicationRoleMap = new Map();
 
-        this._settings = ExtensionUtils.getSettings();
+        this.#settings = ExtensionUtils.getSettings();
     }
 
     /**
@@ -54,13 +58,13 @@ var BoxOrderManager = GObject.registerClass({
         const appIndicator = indicatorContainer.get_child()._indicator;
         let application = appIndicator.id;
 
-        if (!application && this._appIndicatorReadyHandlerIdMap) {
+        if (!application && this.#appIndicatorReadyHandlerIdMap) {
             const handlerId = appIndicator.connect("ready", () => {
                 this.emit("appIndicatorReady");
                 appIndicator.disconnect(handlerId);
-                this._appIndicatorReadyHandlerIdMap.delete(handlerId);
+                this.#appIndicatorReadyHandlerIdMap.delete(handlerId);
             });
-            this._appIndicatorReadyHandlerIdMap.set(handlerId, appIndicator);
+            this.#appIndicatorReadyHandlerIdMap.set(handlerId, appIndicator);
             throw new Error("Application can't be determined.");
         }
 
@@ -71,7 +75,7 @@ var BoxOrderManager = GObject.registerClass({
         }
 
         // Associate the role with the application.
-        let roles = this._appIndicatorItemApplicationRoleMap.get(application);
+        let roles = this.#appIndicatorItemApplicationRoleMap.get(application);
         if (roles) {
             // If the application already has an array of associated roles, just
             // add the role to it, if needed.
@@ -80,7 +84,7 @@ var BoxOrderManager = GObject.registerClass({
             }
         } else {
             // Otherwise create a new array.
-            this._appIndicatorItemApplicationRoleMap.set(application, [role]);
+            this.#appIndicatorItemApplicationRoleMap.set(application, [role]);
         }
 
         // Return the placeholder.
@@ -111,7 +115,7 @@ var BoxOrderManager = GObject.registerClass({
             const application = role.replace("appindicator-kstatusnotifieritem-", "");
 
             // Then get the actual roles associated with this application.
-            let actualRoles = this._appIndicatorItemApplicationRoleMap.get(application);
+            let actualRoles = this.#appIndicatorItemApplicationRoleMap.get(application);
 
             // If there are no actual roles, continue.
             if (!actualRoles) {
@@ -131,12 +135,12 @@ var BoxOrderManager = GObject.registerClass({
      * sure all signals are disconnected.
      */
     disconnectSignals() {
-        for (const [handlerId, appIndicator] of this._appIndicatorReadyHandlerIdMap) {
+        for (const [handlerId, appIndicator] of this.#appIndicatorReadyHandlerIdMap) {
             if (handlerId && appIndicator) {
                 appIndicator.disconnect(handlerId);
             }
         }
-        this._appIndicatorReadyHandlerIdMap = null;
+        this.#appIndicatorReadyHandlerIdMap = null;
     }
 
     /**
@@ -153,7 +157,7 @@ var BoxOrderManager = GObject.registerClass({
      */
     createValidBoxOrder(box) {
         // Get a resolved box order.
-        let boxOrder = this.#resolveAppIndicatorPlaceholders(this._settings.get_strv(`${box}-box-order`));
+        let boxOrder = this.#resolveAppIndicatorPlaceholders(this.#settings.get_strv(`${box}-box-order`));
 
         // ToDo: simplify.
         // Get the indicator containers (of the items) currently present in the
@@ -191,9 +195,9 @@ var BoxOrderManager = GObject.registerClass({
     saveNewTopBarItems() {
         // Load the configured box orders from settings.
         const boxOrders = {
-            left: this._settings.get_strv("left-box-order"),
-            center: this._settings.get_strv("center-box-order"),
-            right: this._settings.get_strv("right-box-order"),
+            left: this.#settings.get_strv("left-box-order"),
+            center: this.#settings.get_strv("center-box-order"),
+            right: this.#settings.get_strv("right-box-order"),
         };
 
         // Get roles (of items) currently present in the Gnome Shell top bar and
@@ -257,11 +261,11 @@ var BoxOrderManager = GObject.registerClass({
 
         // This function saves the given box order to settings.
         const saveBoxOrderToSettings = (boxOrder, box) => {
-            const currentBoxOrder = this._settings.get_strv(`${box}-box-order`);
+            const currentBoxOrder = this.#settings.get_strv(`${box}-box-order`);
             // Only save the updated box order to settings, if it is different,
             // to avoid loops, when listening on settings changes.
             if (JSON.stringify(currentBoxOrder) !== JSON.stringify(boxOrder)) {
-                this._settings.set_strv(`${box}-box-order`, boxOrder);
+                this.#settings.set_strv(`${box}-box-order`, boxOrder);
             }
         };
 

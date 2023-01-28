@@ -23,6 +23,8 @@ var PrefsBoxOrderListBox = GObject.registerClass({
         )
     }
 }, class PrefsBoxOrderListBox extends Gtk.ListBox {
+    #settings;
+
     /**
      * @param {Object} params
      */
@@ -30,7 +32,7 @@ var PrefsBoxOrderListBox = GObject.registerClass({
         super(params);
 
         // Load the settings.
-        this._settings = ExtensionUtils.getSettings();
+        this.#settings = ExtensionUtils.getSettings();
 
         // Add a placeholder widget for the case, where no GtkListBoxRows are
         // present.
@@ -45,7 +47,7 @@ var PrefsBoxOrderListBox = GObject.registerClass({
         this._boxOrder = value;
 
         // Load the settings here as well, since a `CONSTRUCT_ONLY` property
-        // apparently can't access `this._settings`.
+        // apparently can't access `this.#settings`.
         const settings = ExtensionUtils.getSettings();
         // Get the actual box order for the given box order name from settings.
         const boxOrder = settings.get_strv(this._boxOrder);
@@ -74,6 +76,6 @@ var PrefsBoxOrderListBox = GObject.registerClass({
             const item = potentialPrefsBoxOrderItemRow.item;
             currentBoxOrder.push(item);
         }
-        this._settings.set_strv(this.boxOrder, currentBoxOrder);
+        this.#settings.set_strv(this.boxOrder, currentBoxOrder);
     }
 });

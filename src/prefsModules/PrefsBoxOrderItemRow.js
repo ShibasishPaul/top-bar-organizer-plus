@@ -17,6 +17,9 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
         "item-name-display-label"
     ]
 }, class PrefsBoxOrderItemRow extends Adw.ActionRow {
+    #drag_starting_point_x;
+    #drag_starting_point_y;
+
     constructor(params = {}, item) {
         super(params);
 
@@ -65,8 +68,8 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
         value.init(PrefsBoxOrderItemRow);
         value.set_object(this);
 
-        this._drag_starting_point_x = x;
-        this._drag_starting_point_y = y;
+        this.#drag_starting_point_x = x;
+        this.#drag_starting_point_y = y;
         return Gdk.ContentProvider.new_for_value(value);
     }
 
@@ -81,7 +84,7 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
 
         let currentDragIcon = Gtk.DragIcon.get_for_drag(drag);
         currentDragIcon.set_child(dragWidget);
-        drag.set_hotspot(this._drag_starting_point_x, this._drag_starting_point_y);
+        drag.set_hotspot(this.#drag_starting_point_x, this.#drag_starting_point_y);
     }
 
     // Handle a new drop on `this` properly.
