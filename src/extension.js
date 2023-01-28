@@ -43,6 +43,15 @@ class Extension {
         addConfiguredBoxOrderChangeHandler("left");
         addConfiguredBoxOrderChangeHandler("center");
         addConfiguredBoxOrderChangeHandler("right");
+
+        // Handle AppIndicators getting ready.
+        this._boxOrderManager.connect("appIndicatorReady", () => {
+            this._boxOrderManager.saveNewTopBarItems();
+            this.#orderTopBarItems("left");
+            this.#orderTopBarItems("center");
+            this.#orderTopBarItems("right");
+        });
+
     }
 
     disable() {
@@ -55,8 +64,10 @@ class Extension {
         for (const handlerId of this._settingsHandlerIds) {
             this.settings.disconnect(handlerId);
         }
+        this._boxOrderManager.disconnectSignals();
 
         this.settings = null;
+        this._boxOrderManager = null;
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -88,12 +99,6 @@ class Extension {
 
         // Overwrite `Panel._addToPanelBox`.
         Panel.Panel.prototype._addToPanelBox = function (role, indicator, position, box) {
-            // Handle the case where the new item is a
-            // AppIndicator/KStatusNotifierItem.
-            if (role.startsWith("appindicator-")) {
-                // Just throw an error for now.
-                throw new Error("AppIndicator/KStatusNotifierItem addition is currently broken/not implemented.");
-            }
             // Simply call the original `_addToPanelBox` and order the top bar
             // and handle new items afterwards.
             this._originalAddToPanelBox(role, indicator, position, box);

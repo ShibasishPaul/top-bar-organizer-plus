@@ -1,6 +1,8 @@
 "use strict";
 /* exported BoxOrderManager */
 
+const GObject = imports.gi.GObject;
+
 const ExtensionUtils = imports.misc.extensionUtils;
 
 const Main = imports.ui.main;
@@ -20,8 +22,15 @@ const Main = imports.ui.main;
  * what is really useable by the other extension code.
  * It's basically a heavy wrapper around the box orders stored in the settings.
  */
-var BoxOrderManager = class BoxOrderManager {
-    constructor() {
+var BoxOrderManager = GObject.registerClass({
+    Signals: {
+        "appIndicatorReady": {}
+    }
+}, class BoxOrderManager extends GObject.Object {
+    constructor(params = {}) {
+        super(params);
+
+        this._appIndicatorReadyHandlerIdMap = new Map();
         this._appIndicatorItemApplicationRoleMap = new Map();
 
         this._settings = ExtensionUtils.getSettings();
@@ -31,6 +40,10 @@ var BoxOrderManager = class BoxOrderManager {
      * Handles an AppIndicator/KStatusNotifierItem item by associating the role
      * of the given item with the application of the
      * AppIndicator/KStatusNotifier item and returning a placeholder role.
+     * In the case, where the application can't be determined, this method
+     * throws an error. However it also makes sure that once the app indicators
+     * "ready" signal emits, this classes "appIndicatorReady" signal emits as
+     * well.
      * @param {string} indicatorContainer - The container of the indicator of the
      * AppIndicator/KStatusNotifierItem item.
      * @param {string} role - The role of the AppIndicator/KStatusNotifierItem
@@ -38,7 +51,18 @@ var BoxOrderManager = class BoxOrderManager {
      * @returns {string} The placeholder role.
      */
     #handleAppIndicatorItem(indicatorContainer, role) {
-        let application = indicatorContainer.get_child()._indicator.id;
+        const appIndicator = indicatorContainer.get_child()._indicator;
+        let application = appIndicator.id;
+
+        if (!application && this._appIndicatorReadyHandlerIdMap) {
+            const handlerId = appIndicator.connect("ready", () => {
+                this.emit("appIndicatorReady");
+                appIndicator.disconnect(handlerId);
+                this._appIndicatorReadyHandlerIdMap.delete(handlerId);
+            });
+            this._appIndicatorReadyHandlerIdMap.set(handlerId, appIndicator);
+            throw new Error("Application can't be determined.");
+        }
 
         // Since the Dropbox client appends its PID to the id, drop the PID and
         // the hyphen before it.
@@ -99,6 +123,20 @@ var BoxOrderManager = class BoxOrderManager {
         }
 
         return resolvedBoxOrder;
+    }
+
+    /**
+     * Disconnects all signals (and disables future signal connection).
+     * This is typically used before nulling an instance of this class to make
+     * sure all signals are disconnected.
+     */
+    disconnectSignals() {
+        for (const [handlerId, appIndicator] of this._appIndicatorReadyHandlerIdMap) {
+            if (handlerId && appIndicator) {
+                appIndicator.disconnect(handlerId);
+            }
+        }
+        this._appIndicatorReadyHandlerIdMap = null;
     }
 
     /**
@@ -184,7 +222,14 @@ var BoxOrderManager = class BoxOrderManager {
 
                 // Handle an AppIndicator/KStatusNotifierItem item differently.
                 if (role.startsWith("appindicator-")) {
-                    role = this.#handleAppIndicatorItem(indicatorContainer, role);
+                    try {
+                        role = this.#handleAppIndicatorItem(indicatorContainer, role);
+                    } catch (e) {
+                        if (e.message !== "Application can't be determined.") {
+                            throw(e);
+                        }
+                        continue;
+                    }
                 }
 
                 // Add the role to the box order, if it isn't in in one already.
@@ -220,4 +265,4 @@ var BoxOrderManager = class BoxOrderManager {
         saveBoxOrderToSettings(boxOrders.center, "center");
         saveBoxOrderToSettings(boxOrders.right, "right");
     }
-};
+});
