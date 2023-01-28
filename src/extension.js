@@ -150,7 +150,23 @@ class Extension {
             const associatedIndicatorContainer = Main.panel.statusArea[role].container;
 
             associatedIndicatorContainer.get_parent().remove_child(associatedIndicatorContainer);
-            panelBox.insert_child_at_index(associatedIndicatorContainer, i);
+            if (box === "right") {
+                // If the target panel box is the right panel box, insert the
+                // indicator container at index `-1`, which just adds it to the
+                // end (correct order is ensured, since `validBoxOrder` is
+                // sorted correctly and we're looping over it in order).
+                // This way unaccounted-for indicator containers will be at the
+                // left, which is preferred, since the box is logically
+                // right-to-left.
+                // The same applies for indicator containers, which are just
+                // temporarily unaccounted for (like for indicator containers of
+                // not yet ready app indicators), since them being at the right
+                // for a probably temporary stay causes all the indicator
+                // containers to shift.
+                panelBox.insert_child_at_index(associatedIndicatorContainer, -1);
+            } else {
+                panelBox.insert_child_at_index(associatedIndicatorContainer, i);
+            }
         }
         // To handle the case, where the box order got set to a permutation
         // of an outdated box order, it would be wise, if the caller updated the
