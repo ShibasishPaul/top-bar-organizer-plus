@@ -7,7 +7,6 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Main = imports.ui.main;
 const Panel = imports.ui.panel;
 
-const AppIndicatorKStatusNotifierItemManager = Me.imports.extensionModules.AppIndicatorKStatusNotifierItemManager;
 const BoxOrderManager = Me.imports.extensionModules.BoxOrderManager;
 
 class Extension {
@@ -17,11 +16,7 @@ class Extension {
     enable() {
         this.settings = ExtensionUtils.getSettings();
 
-        // Create an instance of AppIndicatorKStatusNotifierItemManager to
-        // handle AppIndicator/KStatusNotifierItem items.
-        this._appIndicatorKStatusNotifierItemManager = new AppIndicatorKStatusNotifierItemManager.AppIndicatorKStatusNotifierItemManager();
-
-        this._boxOrderManager = new BoxOrderManager.BoxOrderManager(this._appIndicatorKStatusNotifierItemManager);
+        this._boxOrderManager = new BoxOrderManager.BoxOrderManager();
 
         // Stuff to do on startup(extension enable).
         this._boxOrderManager.saveNewTopBarItems();

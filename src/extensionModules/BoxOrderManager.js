@@ -21,16 +21,84 @@ const Main = imports.ui.main;
  * It's basically a heavy wrapper around the box orders stored in the settings.
  */
 var BoxOrderManager = class BoxOrderManager {
-    /**
-     * @param {AppIndicatorKStatusNotifierItemManager}
-     * appIndicatorKStatusNotifierItemManager - An instance of
-     * AppIndicatorKStatusNotifierItemManager to be used in the methods of
-     * `this`.
-     */
-    constructor(appIndicatorKStatusNotifierItemManager) {
-        this._appIndicatorKStatusNotifierItemManager = appIndicatorKStatusNotifierItemManager;
+    constructor() {
+        this._appIndicatorItemApplicationRoleMap = new Map();
 
         this._settings = ExtensionUtils.getSettings();
+    }
+
+    /**
+     * Handles an AppIndicator/KStatusNotifierItem item by associating the role
+     * of the given item with the application of the
+     * AppIndicator/KStatusNotifier item and returning a placeholder role.
+     * @param {string} indicatorContainer - The container of the indicator of the
+     * AppIndicator/KStatusNotifierItem item.
+     * @param {string} role - The role of the AppIndicator/KStatusNotifierItem
+     * item.
+     * @returns {string} The placeholder role.
+     */
+    #handleAppIndicatorItem(indicatorContainer, role) {
+        let application = indicatorContainer.get_child()._indicator.id;
+
+        // Since the Dropbox client appends its PID to the id, drop the PID and
+        // the hyphen before it.
+        if (application.startsWith("dropbox-client-")) {
+            application = "dropbox-client";
+        }
+
+        // Associate the role with the application.
+        let roles = this._appIndicatorItemApplicationRoleMap.get(application);
+        if (roles) {
+            // If the application already has an array of associated roles, just
+            // add the role to it, if needed.
+            if (!roles.includes(role)) {
+                roles.push(role);
+            }
+        } else {
+            // Otherwise create a new array.
+            this._appIndicatorItemApplicationRoleMap.set(application, [ role ]);
+        }
+
+        // Return the placeholder.
+        // A box order containing this placeholder can later be resolved to
+        // relevant roles using `#resolveAppIndicatorPlaceholders`.
+        return `appindicator-kstatusnotifieritem-${application}`;
+    }
+
+    /**
+     * Takes a box order and replaces AppIndicator placeholder roles with
+     * actual roles.
+     * @param {string[]} - The box order of which to replace placeholder roles.
+     * @returns {string[]} - A box order with all placeholder roles
+     * resolved/replaced to/with actual roles.
+     */
+    #resolveAppIndicatorPlaceholders(boxOrder) {
+        let resolvedBoxOrder = [ ];
+        for (const role of boxOrder) {
+            // If the role isn't a placeholder, just add it to the resolved box
+            // order.
+            if (!role.startsWith("appindicator-kstatusnotifieritem-")) {
+                resolvedBoxOrder.push(role);
+                continue;
+            }
+
+            /// If the role is a placeholder, replace it.
+            // First get the application this placeholder is associated with.
+            const application = role.replace("appindicator-kstatusnotifieritem-", "");
+
+            // Then get the actual roles associated with this application.
+            let actualRoles = this._appIndicatorItemApplicationRoleMap.get(application);
+
+            // If there are no actual roles, continue.
+            if (!actualRoles) {
+                continue;
+            }
+
+            // Otherwise add the actual roles to the resolved box order.
+            resolvedBoxOrder.push(...actualRoles);
+        }
+
+        return resolvedBoxOrder;
     }
 
     /**
@@ -47,7 +115,7 @@ var BoxOrderManager = class BoxOrderManager {
      */
     createValidBoxOrder(box) {
         // Get a resolved box order.
-        let boxOrder = this._appIndicatorKStatusNotifierItemManager.createResolvedBoxOrder(this._settings.get_strv(`${box}-box-order`));
+        let boxOrder = this.#resolveAppIndicatorPlaceholders(this._settings.get_strv(`${box}-box-order`));
 
         // ToDo: simplify.
         // Get the indicator containers (of the items) currently present in the
@@ -111,13 +179,12 @@ var BoxOrderManager = class BoxOrderManager {
             for (const indicatorContainer of indicatorContainers) {
                 // First get the role associated with the current indicator
                 // container.
-                const role = indicatorContainerRoleMap.get(indicatorContainer);
+                let role = indicatorContainerRoleMap.get(indicatorContainer);
                 if (!role) continue;
 
                 // Handle an AppIndicator/KStatusNotifierItem item differently.
                 if (role.startsWith("appindicator-")) {
-                    this._appIndicatorKStatusNotifierItemManager.handleAppIndicatorKStatusNotifierItemItem(indicatorContainer, role, boxOrder, boxOrders, box === "right");
-                    continue;
+                    role = this.#handleAppIndicatorItem(indicatorContainer, role);
                 }
 
                 // Add the role to the box order, if it isn't in in one already.
