@@ -19,10 +19,7 @@ class Extension {
         this._boxOrderManager = new BoxOrderManager.BoxOrderManager();
 
         // Stuff to do on startup(extension enable).
-        this._boxOrderManager.saveNewTopBarItems();
-        this.#orderTopBarItems("left");
-        this.#orderTopBarItems("center");
-        this.#orderTopBarItems("right");
+        this.#handleNewItemsAndOrderTopBar();
         this.#overwritePanelAddToPanelBox();
 
         // Handle changes of configured box orders.
@@ -30,12 +27,7 @@ class Extension {
 
         const addConfiguredBoxOrderChangeHandler = (box) => {
             let handlerId = this.settings.connect(`changed::${box}-box-order`, () => {
-                this.#orderTopBarItems(box);
-
-                // For the case, where the currently saved box order is based on
-                // a permutation of an outdated box order, save new top bar
-                // items.
-                this._boxOrderManager.saveNewTopBarItems();
+                this.#handleNewItemsAndOrderTopBar();
             });
             this._settingsHandlerIds.push(handlerId);
         };
@@ -46,10 +38,7 @@ class Extension {
 
         // Handle AppIndicators getting ready.
         this._boxOrderManager.connect("appIndicatorReady", () => {
-            this._boxOrderManager.saveNewTopBarItems();
-            this.#orderTopBarItems("left");
-            this.#orderTopBarItems("center");
-            this.#orderTopBarItems("right");
+            this.#handleNewItemsAndOrderTopBar();
         });
 
     }
@@ -83,18 +72,15 @@ class Extension {
 
     /**
      * Overwrite `Panel._addToPanelBox` with a custom method, which simply calls
-     * the original one and orders the top bar and handles new items afterwards.
+     * the original one and handles new items and orders the top bar afterwards.
      */
     #overwritePanelAddToPanelBox() {
         // Add the original `Panel._addToPanelBox` method as
         // `Panel._originalAddToPanelBox`.
         Panel.Panel.prototype._originalAddToPanelBox = Panel.Panel.prototype._addToPanelBox;
 
-        const orderTopBarAndHandleNewItems = () => {
-            this.#orderTopBarItems("left");
-            this.#orderTopBarItems("center");
-            this.#orderTopBarItems("right");
-            this._boxOrderManager.saveNewTopBarItems();
+        const handleNewItemsAndOrderTopBar = () => {
+            this.#handleNewItemsAndOrderTopBar();
         };
 
         // Overwrite `Panel._addToPanelBox`.
@@ -102,7 +88,7 @@ class Extension {
             // Simply call the original `_addToPanelBox` and order the top bar
             // and handle new items afterwards.
             this._originalAddToPanelBox(role, indicator, position, box);
-            orderTopBarAndHandleNewItems();
+            handleNewItemsAndOrderTopBar();
         };
     }
 
@@ -162,6 +148,21 @@ class Extension {
         // To handle the case, where the box order got set to a permutation
         // of an outdated box order, it would be wise, if the caller updated the
         // box order now to include the items present in the top bar.
+    }
+
+    /**
+     * This method handles all new items currently present in the top bar and
+     * orders the items of all top bar boxes.
+     */
+    #handleNewItemsAndOrderTopBar() {
+        this._boxOrderManager.saveNewTopBarItems();
+        this.#orderTopBarItems("left");
+        this.#orderTopBarItems("center");
+        this.#orderTopBarItems("right");
+        // In `this.#orderTopBarItems` it says to update the box orders to
+        // include potentially new items, since the ordering might have been
+        // based on an outdated box order. However, since we already handle new
+        // top bar items at the beginning of this method, this isn't a concern.
     }
 }
 
