@@ -176,7 +176,9 @@ var BoxOrderManager = GObject.registerClass({
             // Get the indicator container associated with the current role.
             const associatedIndicatorContainer = Main.panel.statusArea[role]?.container;
 
-            if (indicatorContainerSet.has(associatedIndicatorContainer)) validBoxOrder.push(role);
+            if (indicatorContainerSet.has(associatedIndicatorContainer)) {
+                validBoxOrder.push(role);
+            }
         }
 
         return validBoxOrder;
@@ -218,7 +220,9 @@ var BoxOrderManager = GObject.registerClass({
                 // First get the role associated with the current indicator
                 // container.
                 let role = indicatorContainerRoleMap.get(indicatorContainer);
-                if (!role) continue;
+                if (!role) {
+                    continue;
+                }
 
                 // Handle an AppIndicator/KStatusNotifierItem item differently.
                 if (role.startsWith("appindicator-")) {

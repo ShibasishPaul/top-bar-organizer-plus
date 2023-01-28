@@ -31,11 +31,14 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
     #associateItem(item) {
         this.item = item;
 
-        // Set `this._item_name_display_label` to something nicer, if the
-        // associated item is an AppIndicator/KStatusNotifierItem item.
-        if (item.startsWith("appindicator-kstatusnotifieritem-")) this._item_name_display_label.set_label(item.replace("appindicator-kstatusnotifieritem-", ""));
-        // Otherwise just set it to `item`.
-        else this._item_name_display_label.set_label(item);
+        if (item.startsWith("appindicator-kstatusnotifieritem-")) {
+            // Set `this._item_name_display_label` to something nicer, if the
+            // associated item is an AppIndicator/KStatusNotifierItem item.
+            this._item_name_display_label.set_label(item.replace("appindicator-kstatusnotifieritem-", ""));
+        } else {
+            // Otherwise just set it to `item`.
+            this._item_name_display_label.set_label(item);
+        }
     }
 
     /**
@@ -133,6 +136,8 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
         // If the list boxes of `this` and the drop value were different,
         // save an updated box order for the list were the drop value was in
         // as well.
-        if (ownListBox !== valueListBox) valueListBox.saveBoxOrderToSettings();
+        if (ownListBox !== valueListBox) {
+            valueListBox.saveBoxOrderToSettings();
+        }
     }
 });

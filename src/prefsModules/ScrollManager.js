@@ -15,7 +15,9 @@ var ScrollManager = class ScrollManager {
 
     startScrollUp() {
         // If the scroll up is already started, don't do anything.
-        if (this._scrollUp) return;
+        if (this._scrollUp) {
+            return;
+        }
 
         // Make sure scroll down is stopped.
         this.stopScrollDown();
@@ -40,7 +42,9 @@ var ScrollManager = class ScrollManager {
 
     startScrollDown() {
         // If the scroll down is already started, don't do anything.
-        if (this._scrollDown) return;
+        if (this._scrollDown) {
+            return;
+        }
 
         // Make sure scroll up is stopped.
         this.stopScrollUp();

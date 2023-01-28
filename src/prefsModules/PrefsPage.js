@@ -42,14 +42,18 @@ var PrefsPage = GObject.registerClass({
 
         // Scroll, when the pointer is in the right places.
         controller.connect("motion", (_, _x, y) => {
-            // If the pointer is currently in the upper ten percent of this
-            // widget, then scroll up.
-            if (y <= this.get_allocated_height() * 0.1) scrollManager.startScrollUp();
-            // If the pointer is currently in the lower ten percent of this
-            // widget, then scroll down.
-            else if (y >= this.get_allocated_height() * 0.9) scrollManager.startScrollDown();
-            // Otherwise stop scrolling.
-            else scrollManager.stopScrollAll();
+            if (y <= this.get_allocated_height() * 0.1) {
+                // If the pointer is currently in the upper ten percent of this
+                // widget, then scroll up.
+                scrollManager.startScrollUp();
+            } else if (y >= this.get_allocated_height() * 0.9) {
+                // If the pointer is currently in the lower ten percent of this
+                // widget, then scroll down.
+                scrollManager.startScrollDown();
+            } else {
+                // Otherwise stop scrolling.
+                scrollManager.stopScrollAll();
+            }
         });
 
         // Make sure scrolling stops, when DND operation ends.

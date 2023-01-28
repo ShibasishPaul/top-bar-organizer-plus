@@ -20,6 +20,12 @@ rules:
   no-unused-vars:
     - error
     - argsIgnorePattern: "^_"
+  curly:
+    - error
+    - all
+  brace-style:
+    - error
+    - 1tbs
   # Rules from GJS Style Guide regarding whitespace.
   # See here: https://gjs.guide/guides/gjs/style-guide.html#whitespace
   func-call-spacing:

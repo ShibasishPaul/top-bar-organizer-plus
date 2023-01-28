@@ -67,7 +67,9 @@ var PrefsBoxOrderListBox = GObject.registerClass({
         let currentBoxOrder = [];
         for (let potentialPrefsBoxOrderItemRow of this) {
             // Only process PrefsBoxOrderItemRows.
-            if (potentialPrefsBoxOrderItemRow.constructor.$gtype.name !== "PrefsBoxOrderItemRow") continue;
+            if (potentialPrefsBoxOrderItemRow.constructor.$gtype.name !== "PrefsBoxOrderItemRow") {
+                continue;
+            }
 
             const item = potentialPrefsBoxOrderItemRow.item;
             currentBoxOrder.push(item);
