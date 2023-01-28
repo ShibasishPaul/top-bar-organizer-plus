@@ -8,15 +8,6 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Main = imports.ui.main;
 
 /**
- * An object containing a box order for the left, center and right top bar
- * box.
- * @typedef {Object} BoxOrders
- * @property {string[]} left - The box order for the left top bar box.
- * @property {string[]} center - The box order for the center top bar box.
- * @property {string[]} right - The box order for the right top bar box.
- */
-
-/**
  * This class provides methods get, set and interact with box orders, while
  * taking over the work of translating between what is stored in settings and
  * what is really useable by the other extension code.

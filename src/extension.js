@@ -111,15 +111,6 @@ class Extension {
     ////////////////////////////////////////////////////////////////////////////
 
     /**
-     * An object containing a box order for the left, center and right top bar
-     * box.
-     * @typedef {Object} BoxOrders
-     * @property {string[]} left - The box order for the left top bar box.
-     * @property {string[]} center - The box order for the center top bar box.
-     * @property {string[]} right - The box order for the right top bar box.
-     */
-
-    /**
      * This method orders the top bar items of the specified box according to
      * the configured box orders.
      * @param {string} box - The box to order.
