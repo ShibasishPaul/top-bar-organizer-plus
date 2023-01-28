@@ -80,7 +80,7 @@ var BoxOrderManager = GObject.registerClass({
             }
         } else {
             // Otherwise create a new array.
-            this._appIndicatorItemApplicationRoleMap.set(application, [ role ]);
+            this._appIndicatorItemApplicationRoleMap.set(application, [role]);
         }
 
         // Return the placeholder.
@@ -97,7 +97,7 @@ var BoxOrderManager = GObject.registerClass({
      * resolved/replaced to/with actual roles.
      */
     #resolveAppIndicatorPlaceholders(boxOrder) {
-        let resolvedBoxOrder = [ ];
+        let resolvedBoxOrder = [];
         for (const role of boxOrder) {
             // If the role isn't a placeholder, just add it to the resolved box
             // order.
@@ -171,7 +171,7 @@ var BoxOrderManager = GObject.registerClass({
         // Go through the box order and only add items to the valid box order,
         // where their indicator is present in the Gnome Shell top bar
         // currently.
-        let validBoxOrder = [ ];
+        let validBoxOrder = [];
         for (const role of boxOrder) {
             // Get the indicator container associated with the current role.
             const associatedIndicatorContainer = Main.panel.statusArea[role]?.container;

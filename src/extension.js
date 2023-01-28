@@ -26,7 +26,7 @@ class Extension {
         this.#overwritePanelAddToPanelBox();
 
         // Handle changes of configured box orders.
-        this._settingsHandlerIds = [ ];
+        this._settingsHandlerIds = [];
 
         const addConfiguredBoxOrderChangeHandler = (box) => {
             let handlerId = this.settings.connect(`changed::${box}-box-order`, () => {
@@ -98,7 +98,7 @@ class Extension {
         };
 
         // Overwrite `Panel._addToPanelBox`.
-        Panel.Panel.prototype._addToPanelBox = function (role, indicator, position, box) {
+        Panel.Panel.prototype._addToPanelBox = function(role, indicator, position, box) {
             // Simply call the original `_addToPanelBox` and order the top bar
             // and handle new items afterwards.
             this._originalAddToPanelBox(role, indicator, position, box);
