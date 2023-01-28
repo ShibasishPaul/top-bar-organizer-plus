@@ -64,13 +64,6 @@ class Extension {
     ////////////////////////////////////////////////////////////////////////////
 
     /**
-     * An object containing a position and box overwrite.
-     * @typedef PositionAndBoxOverwrite
-     * @property {Number} position - The position overwrite.
-     * @property {string} box - The position box overwrite.
-     */
-
-    /**
      * Overwrite `Panel._addToPanelBox` with a custom method, which simply calls
      * the original one and handles new items and orders the top bar afterwards.
      */
