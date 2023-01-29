@@ -14,7 +14,7 @@ class Extension {
     }
 
     enable() {
-        this.settings = ExtensionUtils.getSettings();
+        this._settings = ExtensionUtils.getSettings();
 
         this._boxOrderManager = new BoxOrderManager.BoxOrderManager();
 
@@ -32,7 +32,7 @@ class Extension {
         // Handle changes of configured box orders.
         this._settingsHandlerIds = [];
         const addConfiguredBoxOrderChangeHandler = (box) => {
-            let handlerId = this.settings.connect(`changed::${box}-box-order`, () => {
+            let handlerId = this._settings.connect(`changed::${box}-box-order`, () => {
                 this.#handleNewItemsAndOrderTopBar();
             });
             this._settingsHandlerIds.push(handlerId);
@@ -50,11 +50,11 @@ class Extension {
 
         // Disconnect signals.
         for (const handlerId of this._settingsHandlerIds) {
-            this.settings.disconnect(handlerId);
+            this._settings.disconnect(handlerId);
         }
         this._boxOrderManager.disconnectSignals();
 
-        this.settings = null;
+        this._settings = null;
         this._boxOrderManager = null;
     }
 
