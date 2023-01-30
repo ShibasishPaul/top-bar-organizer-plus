@@ -127,7 +127,7 @@ var BoxOrderManager = GObject.registerClass({
      */
     disconnectSignals() {
         for (const [handlerId, appIndicator] of this.#appIndicatorReadyHandlerIdMap) {
-            if (handlerId && appIndicator) {
+            if (handlerId && appIndicator?.signalHandlerIsConnected(handlerId)) {
                 appIndicator.disconnect(handlerId);
             }
         }
