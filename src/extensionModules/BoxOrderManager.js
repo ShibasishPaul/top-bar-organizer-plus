@@ -184,6 +184,11 @@ var BoxOrderManager = GObject.registerClass({
      * bar to the correct box orders.
      */
     saveNewTopBarItems() {
+        // Only run, when in "user" session mode.
+        if(Main.sessionMode.currentMode !== "user") {
+            return;
+        }
+
         // Load the configured box orders from settings.
         const boxOrders = {
             left: this.#settings.get_strv("left-box-order"),

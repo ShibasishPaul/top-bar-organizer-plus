@@ -94,6 +94,11 @@ class Extension {
      * @param {string} box - The box to order.
      */
     #orderTopBarItems(box) {
+        // Only run, when in "user" session mode.
+        if(Main.sessionMode.currentMode !== "user") {
+            return;
+        }
+
         // Get the valid box order.
         const validBoxOrder = this._boxOrderManager.createValidBoxOrder(box);
 
@@ -147,6 +152,11 @@ class Extension {
      * orders the items of all top bar boxes.
      */
     #handleNewItemsAndOrderTopBar() {
+        // Only run, when in "user" session mode.
+        if(Main.sessionMode.currentMode !== "user") {
+            return;
+        }
+
         this._boxOrderManager.saveNewTopBarItems();
         this.#orderTopBarItems("left");
         this.#orderTopBarItems("center");
