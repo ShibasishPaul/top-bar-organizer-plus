@@ -94,8 +94,9 @@ class Extension {
      * @param {string} box - The box to order.
      */
     #orderTopBarItems(box) {
-        // Only run, when in "user" session mode.
-        if(Main.sessionMode.currentMode !== "user") {
+        // Only run, when the session mode is "user" or the parent session mode
+        // is "user".
+        if(Main.sessionMode.currentMode !== "user" && Main.sessionMode.parentMode !== "user") {
             return;
         }
 
@@ -152,8 +153,9 @@ class Extension {
      * orders the items of all top bar boxes.
      */
     #handleNewItemsAndOrderTopBar() {
-        // Only run, when in "user" session mode.
-        if(Main.sessionMode.currentMode !== "user") {
+        // Only run, when the session mode is "user" or the parent session mode
+        // is "user".
+        if(Main.sessionMode.currentMode !== "user" && Main.sessionMode.parentMode !== "user") {
             return;
         }
 

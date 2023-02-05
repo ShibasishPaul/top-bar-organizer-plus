@@ -184,8 +184,9 @@ var BoxOrderManager = GObject.registerClass({
      * bar to the correct box orders.
      */
     saveNewTopBarItems() {
-        // Only run, when in "user" session mode.
-        if(Main.sessionMode.currentMode !== "user") {
+        // Only run, when the session mode is "user" or the parent session mode
+        // is "user".
+        if(Main.sessionMode.currentMode !== "user" && Main.sessionMode.parentMode !== "user") {
             return;
         }
 
