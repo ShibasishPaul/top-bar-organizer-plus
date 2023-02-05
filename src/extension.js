@@ -124,6 +124,9 @@ class Extension {
             // Get the indicator container associated with the current role.
             const associatedIndicatorContainer = Main.panel.statusArea[role].container;
 
+            // Save whether or not the indicator container is visible.
+            const isVisible = associatedIndicatorContainer.visible;
+
             associatedIndicatorContainer.get_parent().remove_child(associatedIndicatorContainer);
             if (box === "right") {
                 // If the target panel box is the right panel box, insert the
@@ -141,6 +144,11 @@ class Extension {
                 panelBox.insert_child_at_index(associatedIndicatorContainer, -1);
             } else {
                 panelBox.insert_child_at_index(associatedIndicatorContainer, i);
+            }
+
+            // Hide the indicator container again, if it wasn't visible.
+            if (!isVisible) {
+                associatedIndicatorContainer.hide();
             }
         }
         // To handle the case, where the box order got set to a permutation
