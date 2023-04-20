@@ -3,7 +3,7 @@
     "name": "Top Bar Organizer",
     "description": "Organize the items of the top (menu)bar.",
     "version": 7,
-    "shell-version": [ "42", "43" ],
+    "shell-version": [ "42", "43", "44" ],
     "settings-schema": "org.gnome.shell.extensions.top-bar-organizer",
     "url": "https://gitlab.gnome.org/julianschacher/top-bar-organizer"
 }
