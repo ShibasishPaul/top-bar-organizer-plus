@@ -8,3 +8,5 @@ Top Bar Organizer allows you to organize the items of the GNOME Shell top (menu)
 
 The extension is available on the [GNOME Extensions website](https://extensions.gnome.org/extension/4356/top-bar-organizer/).  
 Or you can also manually install a release from the [releases page](https://gitlab.gnome.org/julianschacher/top-bar-organizer/-/releases).
+
+There's also a community-maintained [AUR package](https://aur.archlinux.org/packages/gnome-shell-extension-top-bar-organizer) available.
