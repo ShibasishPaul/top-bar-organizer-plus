@@ -1,18 +1,17 @@
 "use strict";
-/* exported PrefsBoxOrderListBox */
 
-const Gtk = imports.gi.Gtk;
-const GObject = imports.gi.GObject;
+import Gtk from "gi://Gtk";
+import GObject from "gi://GObject";
+import GLib from "gi://GLib";
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
-const PrefsBoxOrderItemRow = Me.imports.prefsModules.PrefsBoxOrderItemRow;
-const PrefsBoxOrderListEmptyPlaceholder = Me.imports.prefsModules.PrefsBoxOrderListEmptyPlaceholder;
+import PrefsBoxOrderItemRow from "./PrefsBoxOrderItemRow.js";
+import PrefsBoxOrderListEmptyPlaceholder from "./PrefsBoxOrderListEmptyPlaceholder.js";
 
-var PrefsBoxOrderListBox = GObject.registerClass({
+const PrefsBoxOrderListBox = GObject.registerClass({
     GTypeName: "PrefsBoxOrderListBox",
-    Template: Me.dir.get_child("ui").get_child("prefs-box-order-list-box.ui").get_uri(),
+    Template: GLib.uri_resolve_relative(import.meta.url, "../ui/prefs-box-order-list-box.ui", GLib.UriFlags.NONE),
     Properties: {
         BoxOrder: GObject.ParamSpec.string(
             "box-order",
@@ -32,11 +31,11 @@ var PrefsBoxOrderListBox = GObject.registerClass({
         super(params);
 
         // Load the settings.
-        this.#settings = ExtensionUtils.getSettings();
+        this.#settings = ExtensionPreferences.lookupByURL(import.meta.url).getSettings();
 
         // Add a placeholder widget for the case, where no GtkListBoxRows are
         // present.
-        this.set_placeholder(new PrefsBoxOrderListEmptyPlaceholder.PrefsBoxOrderListEmptyPlaceholder());
+        this.set_placeholder(new PrefsBoxOrderListEmptyPlaceholder());
     }
 
     get boxOrder() {
@@ -48,13 +47,13 @@ var PrefsBoxOrderListBox = GObject.registerClass({
 
         // Load the settings here as well, since a `CONSTRUCT_ONLY` property
         // apparently can't access `this.#settings`.
-        const settings = ExtensionUtils.getSettings();
+        const settings = ExtensionPreferences.lookupByURL(import.meta.url).getSettings();
         // Get the actual box order for the given box order name from settings.
         const boxOrder = settings.get_strv(this._boxOrder);
         // Populate this GtkListBox with GtkListBoxRows for the items of the
         // given configured box order.
         for (const item of boxOrder) {
-            const listBoxRow = new PrefsBoxOrderItemRow.PrefsBoxOrderItemRow({}, item);
+            const listBoxRow = new PrefsBoxOrderItemRow({}, item);
             this.append(listBoxRow);
         }
 
@@ -79,3 +78,5 @@ var PrefsBoxOrderListBox = GObject.registerClass({
         this.#settings.set_strv(this.boxOrder, currentBoxOrder);
     }
 });
+
+export default PrefsBoxOrderListBox;

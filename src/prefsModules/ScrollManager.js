@@ -1,8 +1,8 @@
 "use strict";
-/* exported ScrollManager */
-const GLib = imports.gi.GLib;
 
-var ScrollManager = class ScrollManager {
+import GLib from "gi://GLib";
+
+export default class ScrollManager {
     #gtkScrolledWindow;
     #scrollUp;
     #scrollDown;
@@ -86,4 +86,4 @@ var ScrollManager = class ScrollManager {
         this.stopScrollUp();
         this.stopScrollDown();
     }
-};
+}

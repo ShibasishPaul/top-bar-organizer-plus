@@ -1,18 +1,15 @@
 "use strict";
-/* exported PrefsBoxOrderItemRow */
 
-const Gtk = imports.gi.Gtk;
-const Gdk = imports.gi.Gdk;
-const Gio = imports.gi.Gio;
-const GObject = imports.gi.GObject;
-const Adw = imports.gi.Adw;
+import Gtk from "gi://Gtk";
+import Gdk from "gi://Gdk";
+import Gio from "gi://Gio";
+import GObject from "gi://GObject";
+import Adw from "gi://Adw";
+import GLib from "gi://GLib";
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-
-var PrefsBoxOrderItemRow = GObject.registerClass({
+const PrefsBoxOrderItemRow = GObject.registerClass({
     GTypeName: "PrefsBoxOrderItemRow",
-    Template: Me.dir.get_child("ui").get_child("prefs-box-order-item-row.ui").get_uri(),
+    Template: GLib.uri_resolve_relative(import.meta.url, "../ui/prefs-box-order-item-row.ui", GLib.UriFlags.NONE),
     InternalChildren: [
         "item-name-display-label"
     ]
@@ -144,3 +141,5 @@ var PrefsBoxOrderItemRow = GObject.registerClass({
         }
     }
 });
+
+export default PrefsBoxOrderItemRow;

@@ -3,6 +3,7 @@ env:
 extends: 'eslint:recommended'
 parserOptions:
   ecmaVersion: 2022
+  sourceType: module
 rules:
   indent:
     - error
@@ -49,5 +50,4 @@ rules:
     - error
     - always
 globals:
-  imports: readonly
   log: readonly

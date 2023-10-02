@@ -1,35 +1,32 @@
 "use strict";
-/* exported buildPrefsWidget, init */
 
-const Gtk = imports.gi.Gtk;
-const Gdk = imports.gi.Gdk;
+import Gtk from "gi://Gtk";
+import Gdk from "gi://Gdk";
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
-const PrefsPage = Me.imports.prefsModules.PrefsPage;
+import PrefsPage from "./prefsModules/PrefsPage.js";
 
-function buildPrefsWidget() {
-    const provider = new Gtk.CssProvider();
-    provider.load_from_path(Me.dir.get_path() + "/css/prefs.css");
-    const defaultGdkDisplay = Gdk.Display.get_default();
-    Gtk.StyleContext.add_provider_for_display(
-        defaultGdkDisplay,
-        provider,
-        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-    );
-
-    const prefsPage = new PrefsPage.PrefsPage();
-
-    prefsPage.connect("destroy", () => {
-        Gtk.StyleContext.remove_provider_for_display(
+export default class TopBarOrganizerPreferences extends ExtensionPreferences {
+    getPreferencesWidget() {
+        const provider = new Gtk.CssProvider();
+        provider.load_from_path(this.metadata.dir.get_path() + "/css/prefs.css");
+        const defaultGdkDisplay = Gdk.Display.get_default();
+        Gtk.StyleContext.add_provider_for_display(
             defaultGdkDisplay,
-            provider
+            provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         );
-    });
 
-    return prefsPage;
-}
+        const prefsPage = new PrefsPage();
 
-function init() {
+        prefsPage.connect("destroy", () => {
+            Gtk.StyleContext.remove_provider_for_display(
+                defaultGdkDisplay,
+                provider
+            );
+        });
+
+        return prefsPage;
+    }
 }

@@ -1,11 +1,8 @@
 "use strict";
-/* exported BoxOrderManager */
 
-const GObject = imports.gi.GObject;
+import GObject from "gi://GObject";
 
-const ExtensionUtils = imports.misc.extensionUtils;
-
-const Main = imports.ui.main;
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 /**
  * This class provides methods get, set and interact with box orders, while
@@ -13,7 +10,7 @@ const Main = imports.ui.main;
  * what is really useable by the other extension code.
  * It's basically a heavy wrapper around the box orders stored in the settings.
  */
-var BoxOrderManager = GObject.registerClass({
+const BoxOrderManager = GObject.registerClass({
     Signals: {
         "appIndicatorReady": {}
     }
@@ -22,13 +19,13 @@ var BoxOrderManager = GObject.registerClass({
     #appIndicatorItemApplicationRoleMap;
     #settings;
 
-    constructor(params = {}) {
+    constructor(params = {}, settings) {
         super(params);
 
         this.#appIndicatorReadyHandlerIdMap = new Map();
         this.#appIndicatorItemApplicationRoleMap = new Map();
 
-        this.#settings = ExtensionUtils.getSettings();
+        this.#settings = settings;
     }
 
     /**
@@ -271,3 +268,5 @@ var BoxOrderManager = GObject.registerClass({
         saveBoxOrderToSettings(boxOrders.right, "right");
     }
 });
+
+export default BoxOrderManager;

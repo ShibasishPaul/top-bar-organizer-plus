@@ -1,15 +1,12 @@
 "use strict";
-/* exported PrefsBoxOrderListEmptyPlaceholder */
 
-const Gtk = imports.gi.Gtk;
-const GObject = imports.gi.GObject;
+import Gtk from "gi://Gtk";
+import GObject from "gi://GObject";
+import GLib from "gi://GLib";
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-
-var PrefsBoxOrderListEmptyPlaceholder = GObject.registerClass({
+const PrefsBoxOrderListEmptyPlaceholder = GObject.registerClass({
     GTypeName: "PrefsBoxOrderListEmptyPlaceholder",
-    Template: Me.dir.get_child("ui").get_child("prefs-box-order-list-empty-placeholder.ui").get_uri()
+    Template: GLib.uri_resolve_relative(import.meta.url, "../ui/prefs-box-order-list-empty-placeholder.ui", GLib.UriFlags.NONE)
 }, class PrefsBoxOrderListEmptyPlaceholder extends Gtk.Box {
     // Handle a new drop on `this` properly.
     // `value` is the thing getting dropped.
@@ -29,3 +26,5 @@ var PrefsBoxOrderListEmptyPlaceholder = GObject.registerClass({
         valueListBox.saveBoxOrderToSettings();
     }
 });
+
+export default PrefsBoxOrderListEmptyPlaceholder;

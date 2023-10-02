@@ -1,22 +1,18 @@
 "use strict";
-/* exported PrefsPage */
 
-const Gtk = imports.gi.Gtk;
-const GObject = imports.gi.GObject;
-const Adw = imports.gi.Adw;
+import Gtk from "gi://Gtk";
+import GObject from "gi://GObject";
+import Adw from "gi://Adw";
+import GLib from "gi://GLib";
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-
-const ScrollManager = Me.imports.prefsModules.ScrollManager;
+import ScrollManager from "./ScrollManager.js";
 
 // Imports to make UI file work.
-/* exported PrefsBoxOrderListBox */
-const PrefsBoxOrderListBox = Me.imports.prefsModules.PrefsBoxOrderListBox;
+import PrefsBoxOrderListBox from "./PrefsBoxOrderListBox.js";
 
-var PrefsPage = GObject.registerClass({
+const PrefsPage = GObject.registerClass({
     GTypeName: "PrefsPage",
-    Template: Me.dir.get_child("ui").get_child("prefs-page.ui").get_uri()
+    Template: GLib.uri_resolve_relative(import.meta.url, "../ui/prefs-page.ui", GLib.UriFlags.NONE)
 }, class PrefsPage extends Adw.PreferencesPage {
     constructor(params = {}) {
         super(params);
@@ -34,7 +30,7 @@ var PrefsPage = GObject.registerClass({
         // Pass `this.get_first_child()` to the ScrollManager, since this
         // `PrefsPage` extends an `Adw.PreferencesPage` and the first child of
         // an `Adw.PreferencesPage` is the built-in `Gtk.ScrolledWindow`.
-        const scrollManager = new ScrollManager.ScrollManager(this.get_first_child());
+        const scrollManager = new ScrollManager(this.get_first_child());
 
         /// Setup GtkDropControllerMotion event controller and make use of its
         /// events.
@@ -86,3 +82,5 @@ var PrefsPage = GObject.registerClass({
         this.add_controller(controller);
     }
 });
+
+export default PrefsPage;

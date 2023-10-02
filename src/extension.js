@@ -1,22 +1,16 @@
 "use strict";
-/* exported init */
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import * as Panel from "resource:///org/gnome/shell/ui/panel.js";
+import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
-const Main = imports.ui.main;
-const Panel = imports.ui.panel;
+import BoxOrderManager from "./extensionModules/BoxOrderManager.js";
 
-const BoxOrderManager = Me.imports.extensionModules.BoxOrderManager;
-
-class Extension {
-    constructor() {
-    }
-
+export default class TopBarOrganizerExtension extends Extension {
     enable() {
-        this._settings = ExtensionUtils.getSettings();
+        this._settings = this.getSettings();
 
-        this._boxOrderManager = new BoxOrderManager.BoxOrderManager();
+        this._boxOrderManager = new BoxOrderManager({}, this._settings);
 
         /// Stuff to do on startup(extension enable).
         // Initially handle new top bar items and order top bar boxes.
@@ -46,7 +40,7 @@ class Extension {
         // Revert the overwrite of `Panel._addToPanelBox`.
         Panel.Panel.prototype._addToPanelBox = Panel.Panel.prototype._originalAddToPanelBox;
         // Set `Panel._originalAddToPanelBox` to `undefined`.
-        Panel._originalAddToPanelBox = undefined;
+        Panel.Panel.prototype._originalAddToPanelBox = undefined;
 
         // Disconnect signals.
         for (const handlerId of this._settingsHandlerIds) {
@@ -176,8 +170,4 @@ class Extension {
         // based on an outdated box order. However, since we already handle new
         // top bar items at the beginning of this method, this isn't a concern.
     }
-}
-
-function init() {
-    return new Extension();
 }
