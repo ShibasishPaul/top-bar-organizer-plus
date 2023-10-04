@@ -44,6 +44,16 @@
     <menu id="optionsMenuModel">
         <section>
             <item>
+                <attribute name="label">Move Up</attribute>
+                <attribute name="action">row.move-up</attribute>
+            </item>
+            <item>
+                <attribute name="label">Move Down</attribute>
+                <attribute name="action">row.move-down</attribute>
+            </item>
+        </section>
+        <section>
+            <item>
                 <attribute name="label">Forget</attribute>
                 <attribute name="action">options.forget</attribute>
             </item>

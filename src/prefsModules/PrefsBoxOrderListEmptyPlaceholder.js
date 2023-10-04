@@ -16,14 +16,17 @@ const PrefsBoxOrderListEmptyPlaceholder = GObject.registerClass({
         const valueListBox = value.get_parent();
 
         // Remove the drop value from its list box.
-        valueListBox.remove(value);
+        valueListBox.removeRow(value);
 
         // Insert the drop value into the list box of `this`.
-        ownListBox.insert(value, 0);
+        ownListBox.insertRow(value, 0);
 
-        /// Finally save the box orders to settings.
+        /// Finally save the box orders to settings and make sure move actions
+        /// are correctly enabled/disabled.
         ownListBox.saveBoxOrderToSettings();
+        ownListBox.determineRowMoveActionEnable();
         valueListBox.saveBoxOrderToSettings();
+        valueListBox.determineRowMoveActionEnable();
     }
 });
 
