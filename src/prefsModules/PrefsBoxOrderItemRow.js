@@ -21,6 +21,12 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
                 }
             }
         }, this);
+        this.install_action("row.forget", null, (self, _actionName, _param) => {
+            const parentListBox = self.get_parent();
+            parentListBox.removeRow(self);
+            parentListBox.saveBoxOrderToSettings();
+            parentListBox.determineRowMoveActionEnable();
+        });
         this.install_action("row.move-up", null, (self, _actionName, _param) => self.emit("move", "up"));
         this.install_action("row.move-down", null, (self, _actionName, _param) => self.emit("move", "down"));
     }
@@ -32,7 +38,6 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
         super(params);
 
         this.#associateItem(item);
-        this.#setupActions();
     }
 
     /**
@@ -50,26 +55,6 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
             // Otherwise just set it to `item`.
             this._item_name_display_label.set_label(item);
         }
-    }
-
-    /**
-     * Setup actions.
-     */
-    #setupActions() {
-        const actionGroup = new Gio.SimpleActionGroup();
-
-        const forgetAction = new Gio.SimpleAction({
-            name: "forget"
-        });
-        forgetAction.connect("activate", (_action, _params) => {
-            const parentListBox = this.get_parent();
-            parentListBox.removeRow(this);
-            parentListBox.saveBoxOrderToSettings();
-            parentListBox.determineRowMoveActionEnable();
-        });
-        actionGroup.add_action(forgetAction);
-
-        this.insert_action_group("options", actionGroup);
     }
 
     onDragPrepare(_source, x, y) {

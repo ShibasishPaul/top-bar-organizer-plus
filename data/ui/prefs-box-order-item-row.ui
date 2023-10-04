@@ -55,7 +55,7 @@
         <section>
             <item>
                 <attribute name="label">Forget</attribute>
-                <attribute name="action">options.forget</attribute>
+                <attribute name="action">row.forget</attribute>
             </item>
         </section>
     </menu>
