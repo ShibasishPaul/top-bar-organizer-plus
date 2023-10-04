@@ -9,24 +9,28 @@ import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/
 import PrefsBoxOrderItemRow from "./PrefsBoxOrderItemRow.js";
 import PrefsBoxOrderListEmptyPlaceholder from "./PrefsBoxOrderListEmptyPlaceholder.js";
 
-const PrefsBoxOrderListBox = GObject.registerClass({
-    GTypeName: "PrefsBoxOrderListBox",
-    Template: GLib.uri_resolve_relative(import.meta.url, "../ui/prefs-box-order-list-box.ui", GLib.UriFlags.NONE),
-    Properties: {
-        BoxOrder: GObject.ParamSpec.string(
-            "box-order",
-            "Box Order",
-            "The box order this PrefsBoxOrderListBox is associated with.",
-            GObject.ParamFlags.READWRITE,
-            ""
-        )
-    },
-    Signals: {
-        "row-move": {
-            param_types: [PrefsBoxOrderItemRow, GObject.TYPE_STRING]
-        }
+export default class PrefsBoxOrderListBox extends Gtk.ListBox {
+    static {
+        GObject.registerClass({
+            GTypeName: "PrefsBoxOrderListBox",
+            Template: GLib.uri_resolve_relative(import.meta.url, "../ui/prefs-box-order-list-box.ui", GLib.UriFlags.NONE),
+            Properties: {
+                BoxOrder: GObject.ParamSpec.string(
+                    "box-order",
+                    "Box Order",
+                    "The box order this PrefsBoxOrderListBox is associated with.",
+                    GObject.ParamFlags.READWRITE,
+                    ""
+                )
+            },
+            Signals: {
+                "row-move": {
+                    param_types: [PrefsBoxOrderItemRow, GObject.TYPE_STRING]
+                }
+            }
+        }, this);
     }
-}, class PrefsBoxOrderListBox extends Gtk.ListBox {
+
     #settings;
     #rowSignalHandlerIds = new Map();
 
@@ -143,6 +147,4 @@ const PrefsBoxOrderListBox = GObject.registerClass({
             }
         }
     }
-});
-
-export default PrefsBoxOrderListBox;
+}

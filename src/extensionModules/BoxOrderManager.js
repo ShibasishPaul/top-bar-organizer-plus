@@ -10,11 +10,15 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
  * what is really useable by the other extension code.
  * It's basically a heavy wrapper around the box orders stored in the settings.
  */
-const BoxOrderManager = GObject.registerClass({
-    Signals: {
-        "appIndicatorReady": {}
+export default class BoxOrderManager extends GObject.Object {
+    static {
+        GObject.registerClass({
+            Signals: {
+                "appIndicatorReady": {}
+            }
+        }, this);
     }
-}, class BoxOrderManager extends GObject.Object {
+
     #appIndicatorReadyHandlerIdMap;
     #appIndicatorItemApplicationRoleMap;
     #settings;
@@ -267,6 +271,4 @@ const BoxOrderManager = GObject.registerClass({
         saveBoxOrderToSettings(boxOrders.center, "center");
         saveBoxOrderToSettings(boxOrders.right, "right");
     }
-});
-
-export default BoxOrderManager;
+}

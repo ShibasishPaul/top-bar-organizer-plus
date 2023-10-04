@@ -11,15 +11,19 @@ import PrefsBoxOrderListEmptyPlaceholder from "./PrefsBoxOrderListEmptyPlacehold
 // Imports to make UI file work.
 import PrefsBoxOrderListBox from "./PrefsBoxOrderListBox.js";
 
-const PrefsPage = GObject.registerClass({
-    GTypeName: "PrefsPage",
-    Template: GLib.uri_resolve_relative(import.meta.url, "../ui/prefs-page.ui", GLib.UriFlags.NONE),
-    InternalChildren: [
-        "left-box-order-list-box",
-        "center-box-order-list-box",
-        "right-box-order-list-box"
-    ]
-}, class PrefsPage extends Adw.PreferencesPage {
+export default class PrefsPage extends Adw.PreferencesPage {
+    static {
+        GObject.registerClass({
+            GTypeName: "PrefsPage",
+            Template: GLib.uri_resolve_relative(import.meta.url, "../ui/prefs-page.ui", GLib.UriFlags.NONE),
+            InternalChildren: [
+                "left-box-order-list-box",
+                "center-box-order-list-box",
+                "right-box-order-list-box"
+            ]
+        }, this);
+    }
+
     constructor(params = {}) {
         super(params);
 
@@ -172,6 +176,4 @@ const PrefsPage = GObject.registerClass({
             return;
         }
     }
-});
-
-export default PrefsPage;
+}
