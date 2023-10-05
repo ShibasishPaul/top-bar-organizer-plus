@@ -19,8 +19,8 @@ export default class PrefsPage extends Adw.PreferencesPage {
             InternalChildren: [
                 "left-box-order-list-box",
                 "center-box-order-list-box",
-                "right-box-order-list-box"
-            ]
+                "right-box-order-list-box",
+            ],
         }, this);
     }
 

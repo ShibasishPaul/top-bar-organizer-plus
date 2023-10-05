@@ -8,7 +8,7 @@ export default class PrefsBoxOrderListEmptyPlaceholder extends Gtk.Box {
     static {
         GObject.registerClass({
             GTypeName: "PrefsBoxOrderListEmptyPlaceholder",
-            Template: GLib.uri_resolve_relative(import.meta.url, "../ui/prefs-box-order-list-empty-placeholder.ui", GLib.UriFlags.NONE)
+            Template: GLib.uri_resolve_relative(import.meta.url, "../ui/prefs-box-order-list-empty-placeholder.ui", GLib.UriFlags.NONE),
         }, this);
     }
 

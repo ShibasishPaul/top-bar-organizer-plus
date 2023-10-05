@@ -14,8 +14,8 @@ export default class BoxOrderManager extends GObject.Object {
     static {
         GObject.registerClass({
             Signals: {
-                "appIndicatorReady": {}
-            }
+                "appIndicatorReady": {},
+            },
         }, this);
     }
 
@@ -157,7 +157,7 @@ export default class BoxOrderManager extends GObject.Object {
         const indicatorContainers = [
             Main.panel._leftBox.get_children(),
             Main.panel._centerBox.get_children(),
-            Main.panel._rightBox.get_children()
+            Main.panel._rightBox.get_children(),
         ].flat();
 
         // Create an indicator containers set from the indicator containers for
@@ -212,7 +212,7 @@ export default class BoxOrderManager extends GObject.Object {
             center: Main.panel._centerBox.get_children(),
             // Reverse this array, since the items in the left and center box
             // are logically LTR, while the items in the right box are RTL.
-            right: Main.panel._rightBox.get_children().reverse()
+            right: Main.panel._rightBox.get_children().reverse(),
         };
 
         // This function goes through the indicator containers of the given box

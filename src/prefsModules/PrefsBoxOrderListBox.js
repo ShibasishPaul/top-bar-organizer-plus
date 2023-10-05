@@ -21,13 +21,13 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
                     "The box order this PrefsBoxOrderListBox is associated with.",
                     GObject.ParamFlags.READWRITE,
                     ""
-                )
+                ),
             },
             Signals: {
                 "row-move": {
-                    param_types: [PrefsBoxOrderItemRow, GObject.TYPE_STRING]
-                }
-            }
+                    param_types: [PrefsBoxOrderItemRow, GObject.TYPE_STRING],
+                },
+            },
         }, this);
     }
 

@@ -13,13 +13,13 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
             GTypeName: "PrefsBoxOrderItemRow",
             Template: GLib.uri_resolve_relative(import.meta.url, "../ui/prefs-box-order-item-row.ui", GLib.UriFlags.NONE),
             InternalChildren: [
-                "item-name-display-label"
+                "item-name-display-label",
             ],
             Signals: {
                 "move": {
-                    param_types: [GObject.TYPE_STRING]
-                }
-            }
+                    param_types: [GObject.TYPE_STRING],
+                },
+            },
         }, this);
         this.install_action("row.forget", null, (self, _actionName, _param) => {
             const parentListBox = self.get_parent();
