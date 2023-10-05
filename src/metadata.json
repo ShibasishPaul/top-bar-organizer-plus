@@ -2,7 +2,7 @@
     "uuid": "top-bar-organizer@julian.gse.jsts.xyz",
     "name": "Top Bar Organizer",
     "description": "Organize the items of the top (menu)bar.",
-    "version": 9,
+    "version": 10,
     "shell-version": [ "45" ],
     "settings-schema": "org.gnome.shell.extensions.top-bar-organizer",
     "url": "https://gitlab.gnome.org/julianschacher/top-bar-organizer"
