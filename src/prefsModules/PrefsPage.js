@@ -9,6 +9,7 @@ import ScrollManager from "./ScrollManager.js";
 import PrefsBoxOrderListEmptyPlaceholder from "./PrefsBoxOrderListEmptyPlaceholder.js";
 
 // Imports to make UI file work.
+// eslint-disable-next-line
 import PrefsBoxOrderListBox from "./PrefsBoxOrderListBox.js";
 
 export default class PrefsPage extends Adw.PreferencesPage {
