@@ -2,7 +2,6 @@
 
 import Gtk from "gi://Gtk";
 import Gdk from "gi://Gdk";
-import Gio from "gi://Gio";
 import GObject from "gi://GObject";
 import Adw from "gi://Adw";
 import GLib from "gi://GLib";
