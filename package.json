@@ -7,9 +7,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@gitlab.gnome.org:julianschacher/top-bar-organizer.git"
+    "url": "git@gitlab.gnome.org:june/top-bar-organizer.git"
   },
-  "author": "Julian Schacher",
+  "author": "June",
   "license": "GPL-3.0-or-later",
   "devDependencies": {
     "eslint": "^8.50.0"
