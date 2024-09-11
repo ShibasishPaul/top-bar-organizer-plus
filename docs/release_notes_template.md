@@ -4,12 +4,23 @@ Top Bar Organizer vX includes the following changes:
 
 The following relevant and/or breaking changes of this version:
 
-<list relevant and/or breaking changes of this version here>
+## Breaking Change
+
+Description
+
+## Relevant Change
+
+Description
+
+# Other Changes
+
+- a change
+- another change
 
 # `git shortlog`
 
 The git shortlog for this version:
 
 ```
-<paste the git shortlog for this version here>
+git shortlog vX-1..vX
 ```
