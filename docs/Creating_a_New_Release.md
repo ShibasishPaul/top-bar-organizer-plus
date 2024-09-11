@@ -43,7 +43,7 @@ To create a new tag, do the following:
 2. Select the corresponding tag created earlier.
 3. Name the release "Top Bar Organizer vX".
 4. Copy the [release notes template](./release_notes_template.md) and fill it out.
-5. Upload the release-ZIP created in the previous step as a release asset.
+5. Drop the release-ZIP created in the previous step at the end of the release notes.
 6. Create the release.
 
 ## Uploading to the GNOME Extensions Website
