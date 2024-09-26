@@ -16,9 +16,10 @@ export default class TopBarOrganizerExtension extends Extension {
         // Initially handle new top bar items and order top bar boxes.
         this.#handleNewItemsAndOrderTopBar();
 
-        // Overwrite `Panel._addToPanelBox` method with one handling new items
-        // and also handle AppIndicators getting ready, to handle new items.
+        // Overwrite the `Panel._addToPanelBox` method with one handling new
+        // items.
         this.#overwritePanelAddToPanelBox();
+        // Handle AppIndicators getting ready, to handle new AppIndicator items.
         this._boxOrderManager.connect("appIndicatorReady", () => {
             this.#handleNewItemsAndOrderTopBar();
         });
@@ -95,7 +96,7 @@ export default class TopBarOrganizerExtension extends Extension {
         }
 
         // Get the valid box order.
-        const validBoxOrder = this._boxOrderManager.createValidBoxOrder(box);
+        const validBoxOrder = this._boxOrderManager.getValidBoxOrder(box);
 
         // Get the relevant box of `Main.panel`.
         let panelBox;
@@ -111,10 +112,10 @@ export default class TopBarOrganizerExtension extends Extension {
                 break;
         }
 
-        /// Go through the items (or rather their roles) of the validBoxOrder
-        /// and order the panelBox accordingly.
+        /// Go through the items of the validBoxOrder and order the GNOME Shell
+        /// top bar box accordingly.
         for (let i = 0; i < validBoxOrder.length; i++) {
-            const role = validBoxOrder[i];
+            const role = validBoxOrder[i].role;
             // Get the indicator container associated with the current role.
             const associatedIndicatorContainer = Main.panel.statusArea[role].container;
 

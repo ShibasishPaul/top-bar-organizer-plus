@@ -5,10 +5,18 @@ import GObject from "gi://GObject";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 /**
- * This class provides methods get, set and interact with box orders, while
- * taking over the work of translating between what is stored in settings and
- * what is really useable by the other extension code.
- * It's basically a heavy wrapper around the box orders stored in the settings.
+ * A resolved box order item containing the items role and settings identifier.
+ * @typedef {Object} ResolvedBoxOrderItem
+ * @property {string} settingsId - The settings identifier of the item.
+ * @property {string} role - The role of the item.
+ */
+
+/**
+ * This class provides an interfaces to the box orders stored in settings.
+ * It takes care of handling AppIndicator items and resolving from the internal
+ * item settings identifiers to roles.
+ * In the end this results in convenient functions, which are directly useful in
+ * other extension code.
  */
 export default class BoxOrderManager extends GObject.Object {
     static {
@@ -20,31 +28,33 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     #appIndicatorReadyHandlerIdMap;
-    #appIndicatorItemApplicationRoleMap;
+    #appIndicatorItemSettingsIdToRolesMap;
     #settings;
 
     constructor(params = {}, settings) {
         super(params);
 
         this.#appIndicatorReadyHandlerIdMap = new Map();
-        this.#appIndicatorItemApplicationRoleMap = new Map();
+        this.#appIndicatorItemSettingsIdToRolesMap = new Map();
 
         this.#settings = settings;
     }
 
     /**
-     * Handles an AppIndicator/KStatusNotifierItem item by associating the role
-     * of the given item with the application of the
-     * AppIndicator/KStatusNotifier item and returning a placeholder role.
-     * In the case, where the application can't be determined, this method
-     * throws an error. However it also makes sure that once the app indicators
-     * "ready" signal emits, this classes "appIndicatorReady" signal emits as
-     * well.
+     * Handles an AppIndicator/KStatusNotifierItem item by deriving a settings
+     * identifier and then associating the role of the given item to the items
+     * settings identifier.
+     * It then returns the derived settings identifier.
+     * In the case, where the settings identifier can't be derived, because the
+     * application can't be determined, this method throws an error. However it
+     * then also makes sure that once the app indicators "ready" signal emits,
+     * this classes "appIndicatorReady" signal emits as well, such that it and
+     * other methods can be called again to properly handle the item.
      * @param {string} indicatorContainer - The container of the indicator of the
      * AppIndicator/KStatusNotifierItem item.
      * @param {string} role - The role of the AppIndicator/KStatusNotifierItem
      * item.
-     * @returns {string} The placeholder role.
+     * @returns {string} The derived items settings identifier.
      */
     #handleAppIndicatorItem(indicatorContainer, role) {
         const appIndicator = indicatorContainer.get_child()._indicator;
@@ -66,56 +76,75 @@ export default class BoxOrderManager extends GObject.Object {
             application = "dropbox-client";
         }
 
-        // Associate the role with the application.
-        let roles = this.#appIndicatorItemApplicationRoleMap.get(application);
+        // Derive the items settings identifier from the application name.
+        const itemSettingsId = `appindicator-kstatusnotifieritem-${application}`;
+
+        // Associate the role with the items settings identifier.
+        let roles = this.#appIndicatorItemSettingsIdToRolesMap.get(itemSettingsId);
         if (roles) {
-            // If the application already has an array of associated roles, just
-            // add the role to it, if needed.
+            // If the settings identifier already has an array of associated
+            // roles, just add the role to it, if needed.
             if (!roles.includes(role)) {
                 roles.push(role);
             }
         } else {
             // Otherwise create a new array.
-            this.#appIndicatorItemApplicationRoleMap.set(application, [role]);
+            this.#appIndicatorItemSettingsIdToRolesMap.set(itemSettingsId, [role]);
         }
 
-        // Return the placeholder.
-        // A box order containing this placeholder can later be resolved to
-        // relevant roles using `#resolveAppIndicatorPlaceholders`.
-        return `appindicator-kstatusnotifieritem-${application}`;
+        // Return the item settings identifier.
+        return itemSettingsId;
     }
 
     /**
-     * Takes a box order and replaces AppIndicator placeholder roles with
-     * actual roles.
-     * @param {string[]} - The box order of which to replace placeholder roles.
-     * @returns {string[]} - A box order with all placeholder roles
-     * resolved/replaced to/with actual roles.
+     * Gets a resolved box order for the given top bar box, where all
+     * AppIndicator items got resolved using their roles, meaning they might be
+     * present multiple times or not at all depending on the roles stored.
+     * @param {string} box - The top bar box for which to get the resolved box order.
+     * Must be one of the following values:
+     * - "left"
+     * - "center"
+     * - "right"
+     * @returns {ResolvedBoxOrderItem[]} - The resolved box order.
      */
-    #resolveAppIndicatorPlaceholders(boxOrder) {
+    #getResolvedBoxOrder(box) {
+        // Get the box order from settings.
+        let boxOrder = this.#settings.get_strv(`${box}-box-order`);
+
         let resolvedBoxOrder = [];
-        for (const role of boxOrder) {
-            // If the role isn't a placeholder, just add it to the resolved box
-            // order.
-            if (!role.startsWith("appindicator-kstatusnotifieritem-")) {
-                resolvedBoxOrder.push(role);
+        for (const itemSettingsId of boxOrder) {
+            const resolvedBoxOrderItem = {
+                settingsId: itemSettingsId,
+                role: "",
+            };
+
+            // If the items settings identifier doesn't indicate that the item
+            // is an AppIndicator/KStatusNotifierItem item, then its identifier
+            // is the role and it can just be added to the resolved box order.
+            if (!itemSettingsId.startsWith("appindicator-kstatusnotifieritem-")) {
+                resolvedBoxOrderItem.role = resolvedBoxOrderItem.settingsId;
+                resolvedBoxOrder.push(resolvedBoxOrderItem);
                 continue;
             }
 
-            /// If the role is a placeholder, replace it.
-            // First get the application this placeholder is associated with.
-            const application = role.replace("appindicator-kstatusnotifieritem-", "");
+            // If the items settings identifier indicates otherwise, then handle
+            // the item specially.
 
-            // Then get the actual roles associated with this application.
-            let actualRoles = this.#appIndicatorItemApplicationRoleMap.get(application);
+            // Get the roles roles associated with the items settings id.
+            let roles = this.#appIndicatorItemSettingsIdToRolesMap.get(resolvedBoxOrderItem.settingsId);
 
-            // If there are no actual roles, continue.
-            if (!actualRoles) {
+            // If there are no roles associated, continue.
+            if (!roles) {
                 continue;
             }
 
-            // Otherwise add the actual roles to the resolved box order.
-            resolvedBoxOrder.push(...actualRoles);
+            // Otherwise create a new resolved box order item for each role and
+            // add it to the resolved box order.
+            for (const role of roles) {
+                const newResolvedBoxOrderItem = JSON.parse(JSON.stringify(resolvedBoxOrderItem));
+                newResolvedBoxOrderItem.role = role;
+                resolvedBoxOrder.push(newResolvedBoxOrderItem);
+            }
         }
 
         return resolvedBoxOrder;
@@ -136,24 +165,23 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
-     * This method returns a valid box order for the given top bar box.
-     * This means it returns a box order, where only roles are included, which
-     * have their associated indicator container already in some box of the
-     * Gnome Shell top bar.
+     * Gets a valid box order for the given top bar box, where all AppIndicator
+     * items got resolved and where only items are included, which are in some
+     * GNOME Shell top bar box.
      * @param {string} box - The top bar box to return the valid box order for.
      * Must be one of the following values:
      * - "left"
      * - "center"
      * - "right"
-     * @returns {string[]} - The valid box order.
+     * @returns {ResolvedBoxOrderItem[]} - The valid box order.
      */
-    createValidBoxOrder(box) {
+    getValidBoxOrder(box) {
         // Get a resolved box order.
-        let boxOrder = this.#resolveAppIndicatorPlaceholders(this.#settings.get_strv(`${box}-box-order`));
+        let resolvedBoxOrder = this.#getResolvedBoxOrder(box);
 
         // ToDo: simplify.
         // Get the indicator containers (of the items) currently present in the
-        // Gnome Shell top bar.
+        // GNOME Shell top bar.
         const indicatorContainers = [
             Main.panel._leftBox.get_children(),
             Main.panel._centerBox.get_children(),
@@ -164,16 +192,16 @@ export default class BoxOrderManager extends GObject.Object {
         // fast easy access.
         const indicatorContainerSet = new Set(indicatorContainers);
 
-        // Go through the box order and only add items to the valid box order,
-        // where their indicator is present in the Gnome Shell top bar
-        // currently.
+        // Go through the resolved box order and only add items to the valid box
+        // order, where their indicator is currently present in the GNOME Shell
+        // top bar.
         let validBoxOrder = [];
-        for (const role of boxOrder) {
-            // Get the indicator container associated with the current role.
-            const associatedIndicatorContainer = Main.panel.statusArea[role]?.container;
+        for (const item of resolvedBoxOrder) {
+            // Get the indicator container associated with the items role.
+            const associatedIndicatorContainer = Main.panel.statusArea[item.role]?.container;
 
             if (indicatorContainerSet.has(associatedIndicatorContainer)) {
-                validBoxOrder.push(role);
+                validBoxOrder.push(item);
             }
         }
 
@@ -181,13 +209,13 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
-     * This method saves all new items currently present in the Gnome Shell top
-     * bar to the correct box orders.
+     * This method saves all new items currently present in the GNOME Shell top
+     * bar to the settings.
      */
     saveNewTopBarItems() {
         // Only run, when the session mode is "user" or the parent session mode
         // is "user".
-        if(Main.sessionMode.currentMode !== "user" && Main.sessionMode.parentMode !== "user") {
+        if (Main.sessionMode.currentMode !== "user" && Main.sessionMode.parentMode !== "user") {
             return;
         }
 
@@ -198,7 +226,7 @@ export default class BoxOrderManager extends GObject.Object {
             right: this.#settings.get_strv("right-box-order"),
         };
 
-        // Get roles (of items) currently present in the Gnome Shell top bar and
+        // Get roles (of items) currently present in the GNOME Shell top bar and
         // index them using their associated indicator container.
         let indicatorContainerRoleMap = new Map();
         for (const role in Main.panel.statusArea) {
@@ -206,7 +234,7 @@ export default class BoxOrderManager extends GObject.Object {
         }
 
         // Get the indicator containers (of the items) currently present in the
-        // Gnome Shell top bar boxes.
+        // GNOME Shell top bar boxes.
         const boxIndicatorContainers = {
             left: Main.panel._leftBox.get_children(),
             center: Main.panel._centerBox.get_children(),
@@ -216,8 +244,8 @@ export default class BoxOrderManager extends GObject.Object {
         };
 
         // This function goes through the indicator containers of the given box
-        // and adds roles of new items to the box order.
-        const addNewItemsToBoxOrder = (indicatorContainers, boxOrder, box) => {
+        // and adds new item settings identifiers to the given box order.
+        const addNewItemSettingsIdsToBoxOrder = (indicatorContainers, boxOrder, box) => {
             for (const indicatorContainer of indicatorContainers) {
                 // First get the role associated with the current indicator
                 // container.
@@ -226,36 +254,43 @@ export default class BoxOrderManager extends GObject.Object {
                     continue;
                 }
 
-                // Handle an AppIndicator/KStatusNotifierItem item differently.
+                // Then get a settings identifier for the item.
+                let itemSettingsId;
+                // If the role indicates that the item is an
+                // AppIndicator/KStatusNotifierItem item, then handle it
+                // differently
                 if (role.startsWith("appindicator-")) {
                     try {
-                        role = this.#handleAppIndicatorItem(indicatorContainer, role);
+                        itemSettingsId = this.#handleAppIndicatorItem(indicatorContainer, role);
                     } catch (e) {
                         if (e.message !== "Application can't be determined.") {
                             throw(e);
                         }
                         continue;
                     }
+                } else { // Otherwise just use the role as the settings identifier.
+                    itemSettingsId = role;
                 }
 
-                // Add the role to the box order, if it isn't in in one already.
-                if (!boxOrders.left.includes(role)
-                    && !boxOrders.center.includes(role)
-                    && !boxOrders.right.includes(role)) {
+                // Add the items settings identifier to the box order, if it
+                // isn't in in one already.
+                if (!boxOrders.left.includes(itemSettingsId)
+                    && !boxOrders.center.includes(itemSettingsId)
+                    && !boxOrders.right.includes(itemSettingsId)) {
                     if (box === "right") {
                         // Add the items to the beginning for this array, since
                         // its RTL.
-                        boxOrder.unshift(role);
+                        boxOrder.unshift(itemSettingsId);
                     } else {
-                        boxOrder.push(role);
+                        boxOrder.push(itemSettingsId);
                     }
                 }
             }
         };
 
-        addNewItemsToBoxOrder(boxIndicatorContainers.left, boxOrders.left, "left");
-        addNewItemsToBoxOrder(boxIndicatorContainers.center, boxOrders.center, "center");
-        addNewItemsToBoxOrder(boxIndicatorContainers.right, boxOrders.right, "right");
+        addNewItemSettingsIdsToBoxOrder(boxIndicatorContainers.left, boxOrders.left, "left");
+        addNewItemSettingsIdsToBoxOrder(boxIndicatorContainers.center, boxOrders.center, "center");
+        addNewItemSettingsIdsToBoxOrder(boxIndicatorContainers.right, boxOrders.right, "right");
 
         // This function saves the given box order to settings.
         const saveBoxOrderToSettings = (boxOrder, box) => {
