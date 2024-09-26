@@ -41,6 +41,41 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
+     * Gets a box order for the given top bar box from settings.
+     * @param {string} box - The top bar box for which to get the box order.
+     * Must be one of the following values:
+     * - "left"
+     * - "center"
+     * - "right"
+     * @returns {string[]} - The box order consisting of an array of item
+     * settings identifiers.
+     */
+    #getBoxOrder(box) {
+        return this.#settings.get_strv(`${box}-box-order`);
+    }
+
+    /**
+     * Save the given box order to settings, making sure to only save a changed
+     * box order, to avoid loops when listening on settings changes.
+     * @param {string} box - The top bar box for which to save the box order.
+     * Must be one of the following values:
+     * - "left"
+     * - "center"
+     * - "right"
+     * @param {string[]} boxOrder - The box order to save. Must be an array of
+     * item settings identifiers.
+     */
+    #saveBoxOrder(box, boxOrder) {
+        const currentBoxOrder = this.#getBoxOrder(box);
+
+        // Only save the given box order to settings, if it is different, to
+        // avoid loops when listening on settings changes.
+        if (JSON.stringify(boxOrder) !== JSON.stringify(currentBoxOrder)) {
+            this.#settings.set_strv(`${box}-box-order`, boxOrder);
+        }
+    }
+
+    /**
      * Handles an AppIndicator/KStatusNotifierItem item by deriving a settings
      * identifier and then associating the role of the given item to the items
      * settings identifier.
@@ -108,8 +143,7 @@ export default class BoxOrderManager extends GObject.Object {
      * @returns {ResolvedBoxOrderItem[]} - The resolved box order.
      */
     #getResolvedBoxOrder(box) {
-        // Get the box order from settings.
-        let boxOrder = this.#settings.get_strv(`${box}-box-order`);
+        let boxOrder = this.#getBoxOrder(box);
 
         let resolvedBoxOrder = [];
         for (const itemSettingsId of boxOrder) {
@@ -219,11 +253,11 @@ export default class BoxOrderManager extends GObject.Object {
             return;
         }
 
-        // Load the configured box orders from settings.
+        // Get the box orders.
         const boxOrders = {
-            left: this.#settings.get_strv("left-box-order"),
-            center: this.#settings.get_strv("center-box-order"),
-            right: this.#settings.get_strv("right-box-order"),
+            left: this.#getBoxOrder("left"),
+            center: this.#getBoxOrder("center"),
+            right: this.#getBoxOrder("right"),
         };
 
         // Get roles (of items) currently present in the GNOME Shell top bar and
@@ -292,18 +326,8 @@ export default class BoxOrderManager extends GObject.Object {
         addNewItemSettingsIdsToBoxOrder(boxIndicatorContainers.center, boxOrders.center, "center");
         addNewItemSettingsIdsToBoxOrder(boxIndicatorContainers.right, boxOrders.right, "right");
 
-        // This function saves the given box order to settings.
-        const saveBoxOrderToSettings = (boxOrder, box) => {
-            const currentBoxOrder = this.#settings.get_strv(`${box}-box-order`);
-            // Only save the updated box order to settings, if it is different,
-            // to avoid loops, when listening on settings changes.
-            if (JSON.stringify(currentBoxOrder) !== JSON.stringify(boxOrder)) {
-                this.#settings.set_strv(`${box}-box-order`, boxOrder);
-            }
-        };
-
-        saveBoxOrderToSettings(boxOrders.left, "left");
-        saveBoxOrderToSettings(boxOrders.center, "center");
-        saveBoxOrderToSettings(boxOrders.right, "right");
+        this.#saveBoxOrder("left", boxOrders.left);
+        this.#saveBoxOrder("center", boxOrders.center);
+        this.#saveBoxOrder("right", boxOrders.right);
     }
 }
