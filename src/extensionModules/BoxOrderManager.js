@@ -5,10 +5,13 @@ import GObject from "gi://GObject";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 /**
- * A resolved box order item containing the items role and settings identifier.
+ * A resolved box order item containing the items role, settings identifier and
+ * additional information.
  * @typedef {Object} ResolvedBoxOrderItem
  * @property {string} settingsId - The settings identifier of the item.
  * @property {string} role - The role of the item.
+ * @property {string} hide - Whether the item should be (forcefully) hidden
+ * (hide), shown (show) or just be left as is (default).
  */
 
 /**
@@ -135,6 +138,7 @@ export default class BoxOrderManager extends GObject.Object {
      * Gets a resolved box order for the given top bar box, where all
      * AppIndicator items got resolved using their roles, meaning they might be
      * present multiple times or not at all depending on the roles stored.
+     * The items of the box order also have additional information stored.
      * @param {string} box - The top bar box for which to get the resolved box order.
      * Must be one of the following values:
      * - "left"
@@ -145,12 +149,25 @@ export default class BoxOrderManager extends GObject.Object {
     #getResolvedBoxOrder(box) {
         let boxOrder = this.#getBoxOrder(box);
 
+        const itemsToHide = this.#settings.get_strv("hide");
+        const itemsToShow = this.#settings.get_strv("show");
+
         let resolvedBoxOrder = [];
         for (const itemSettingsId of boxOrder) {
             const resolvedBoxOrderItem = {
                 settingsId: itemSettingsId,
                 role: "",
+                hide: "",
             };
+
+            // Set the hide state of the item.
+            if (itemsToHide.includes(resolvedBoxOrderItem.settingsId)) {
+                resolvedBoxOrderItem.hide = "hide";
+            } else if (itemsToShow.includes(resolvedBoxOrderItem.settingsId)) {
+                resolvedBoxOrderItem.hide = "show";
+            } else {
+                resolvedBoxOrderItem.hide = "default";
+            }
 
             // If the items settings identifier doesn't indicate that the item
             // is an AppIndicator/KStatusNotifierItem item, then its identifier
@@ -202,6 +219,7 @@ export default class BoxOrderManager extends GObject.Object {
      * Gets a valid box order for the given top bar box, where all AppIndicator
      * items got resolved and where only items are included, which are in some
      * GNOME Shell top bar box.
+     * The items of the box order also have additional information stored.
      * @param {string} box - The top bar box to return the valid box order for.
      * Must be one of the following values:
      * - "left"

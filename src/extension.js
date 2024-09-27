@@ -24,17 +24,19 @@ export default class TopBarOrganizerExtension extends Extension {
             this.#handleNewItemsAndOrderTopBar();
         });
 
-        // Handle changes of configured box orders.
+        // Handle changes of settings.
         this._settingsHandlerIds = [];
-        const addConfiguredBoxOrderChangeHandler = (box) => {
-            let handlerId = this._settings.connect(`changed::${box}-box-order`, () => {
+        const addSettingsChangeHandler = (settingsName) => {
+            const handlerId = this._settings.connect(`changed::${settingsName}`, () => {
                 this.#handleNewItemsAndOrderTopBar();
             });
             this._settingsHandlerIds.push(handlerId);
         };
-        addConfiguredBoxOrderChangeHandler("left");
-        addConfiguredBoxOrderChangeHandler("center");
-        addConfiguredBoxOrderChangeHandler("right");
+        addSettingsChangeHandler("left-box-order");
+        addSettingsChangeHandler("center-box-order");
+        addSettingsChangeHandler("right-box-order");
+        addSettingsChangeHandler("hide");
+        addSettingsChangeHandler("show");
     }
 
     disable() {
@@ -115,9 +117,9 @@ export default class TopBarOrganizerExtension extends Extension {
         /// Go through the items of the validBoxOrder and order the GNOME Shell
         /// top bar box accordingly.
         for (let i = 0; i < validBoxOrder.length; i++) {
-            const role = validBoxOrder[i].role;
+            const item = validBoxOrder[i];
             // Get the indicator container associated with the current role.
-            const associatedIndicatorContainer = Main.panel.statusArea[role].container;
+            const associatedIndicatorContainer = Main.panel.statusArea[item.role].container;
 
             // Save whether or not the indicator container is visible.
             const isVisible = associatedIndicatorContainer.visible;
@@ -141,8 +143,16 @@ export default class TopBarOrganizerExtension extends Extension {
                 panelBox.insert_child_at_index(associatedIndicatorContainer, i);
             }
 
-            // Hide the indicator container again, if it wasn't visible.
-            if (!isVisible) {
+            // Hide the indicator container...
+            // - ...if it wasn't visible before and the hide property of the
+            //   item is "default".
+            // - if the hide property of the item is "hide".
+            // In all other cases have the item show.
+            // An e.g. screen recording indicator still wouldn't show tho, since
+            // this here acts on the indicator container, but a screen recording
+            // indicator is hidden on the indicator level.
+            if ((!isVisible && item.hide === "default") ||
+                item.hide === "hide") {
                 associatedIndicatorContainer.hide();
             }
         }

@@ -13,5 +13,13 @@
             <description>Order of items in the right box of the top bar.</description>
             <default>[]</default>
         </key>
+        <key name="hide" type="as">
+            <description>Top bar items to (forcefully) hide.</description>
+            <default>[]</default>
+        </key>
+        <key name="show" type="as">
+            <description>Top bar items to (forcefully) show.</description>
+            <default>[]</default>
+        </key>
     </schema>
 </schemalist>
