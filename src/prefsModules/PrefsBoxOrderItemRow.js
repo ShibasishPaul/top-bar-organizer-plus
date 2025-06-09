@@ -11,9 +11,6 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
         GObject.registerClass({
             GTypeName: "PrefsBoxOrderItemRow",
             Template: GLib.uri_resolve_relative(import.meta.url, "../ui/prefs-box-order-item-row.ui", GLib.UriFlags.NONE),
-            InternalChildren: [
-                "item-name-display-label",
-            ],
             Signals: {
                 "move": {
                     param_types: [GObject.TYPE_STRING],
@@ -47,12 +44,12 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
         this.item = item;
 
         if (item.startsWith("appindicator-kstatusnotifieritem-")) {
-            // Set `this._item_name_display_label` to something nicer, if the
-            // associated item is an AppIndicator/KStatusNotifierItem item.
-            this._item_name_display_label.set_label(item.replace("appindicator-kstatusnotifieritem-", ""));
+            // Set the title to something nicer, if the associated item is an
+            // AppIndicator/KStatusNotifierItem item.
+            this.set_title(item.replace("appindicator-kstatusnotifieritem-", ""));
         } else {
             // Otherwise just set it to `item`.
-            this._item_name_display_label.set_label(item);
+            this.set_title(item);
         }
     }
 

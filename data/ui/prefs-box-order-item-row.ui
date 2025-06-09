@@ -2,12 +2,6 @@
 <interface>
     <template class="PrefsBoxOrderItemRow" parent="AdwActionRow">
         <child type="prefix">
-            <object class="GtkLabel" id="item-name-display-label">
-                <property name="halign">start</property>
-                <property name="hexpand">True</property>
-            </object>
-        </child>
-        <child type="prefix">
             <object class="GtkImage">
                 <property name="icon-name">list-drag-handle-symbolic</property>
                 <style>
