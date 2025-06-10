@@ -86,7 +86,7 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
     onDrop(_target, value, _x, _y) {
         // If `this` got dropped onto itself, do nothing.
         if (value === this) {
-            return;
+            return false;
         }
 
         // Get the GtkListBoxes of `this` and the drop value.
@@ -138,5 +138,7 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
             valueListBox.saveBoxOrderToSettings();
             valueListBox.determineRowMoveActionEnable();
         }
+
+        return true;
     }
 }

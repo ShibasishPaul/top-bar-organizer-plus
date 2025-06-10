@@ -31,5 +31,7 @@ export default class PrefsBoxOrderListEmptyPlaceholder extends Gtk.Box {
         ownListBox.determineRowMoveActionEnable();
         valueListBox.saveBoxOrderToSettings();
         valueListBox.determineRowMoveActionEnable();
+
+        return true;
     }
 }
