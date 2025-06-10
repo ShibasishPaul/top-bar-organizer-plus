@@ -16,8 +16,8 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 /**
  * This class provides an interfaces to the box orders stored in settings.
- * It takes care of handling AppIndicator items and resolving from the internal
- * item settings identifiers to roles.
+ * It takes care of handling AppIndicator and Task Up UltraLite items and
+ * resolving from the internal item settings identifiers to roles.
  * In the end this results in convenient functions, which are directly useful in
  * other extension code.
  */
@@ -32,6 +32,7 @@ export default class BoxOrderManager extends GObject.Object {
 
     #appIndicatorReadyHandlerIdMap;
     #appIndicatorItemSettingsIdToRolesMap;
+    #taskUpUltraLiteItemRoles;
     #settings;
 
     constructor(params = {}, settings) {
@@ -39,6 +40,7 @@ export default class BoxOrderManager extends GObject.Object {
 
         this.#appIndicatorReadyHandlerIdMap = new Map();
         this.#appIndicatorItemSettingsIdToRolesMap = new Map();
+        this.#taskUpUltraLiteItemRoles = [];
 
         this.#settings = settings;
     }
@@ -135,9 +137,30 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
+     * Handles a Task Up UltraLite item by storing its role and returning the
+     * Task Up UltraLite settings identifier.
+     * This is needed since the Task Up UltraLite extension creates a bunch of
+     * top bar items as part of its functionality, so we want to group them
+     * under one identifier in the settings.
+     * https://extensions.gnome.org/extension/7700/task-up-ultralite/
+     * @param {string} role - The role of the Task Up UltraLite item.
+     * @returns {string} The settings identifier to use.
+     */
+    #handleTaskUpUltraLiteItem(role) {
+        const roles = this.#taskUpUltraLiteItemRoles;
+
+        if (!roles.includes(role)) {
+            roles.push(role);
+        }
+
+        return "item-role-group-task-up-ultralite";
+    }
+
+    /**
      * Gets a resolved box order for the given top bar box, where all
-     * AppIndicator items got resolved using their roles, meaning they might be
-     * present multiple times or not at all depending on the roles stored.
+     * AppIndicator and Task Up UltraLite items got resolved using their roles,
+     * meaning they might be present multiple times or not at all depending on
+     * the roles stored.
      * The items of the box order also have additional information stored.
      * @param {string} box - The top bar box for which to get the resolved box order.
      * Must be one of the following values:
@@ -170,9 +193,11 @@ export default class BoxOrderManager extends GObject.Object {
             }
 
             // If the items settings identifier doesn't indicate that the item
-            // is an AppIndicator/KStatusNotifierItem item, then its identifier
-            // is the role and it can just be added to the resolved box order.
-            if (!itemSettingsId.startsWith("appindicator-kstatusnotifieritem-")) {
+            // is an AppIndicator/KStatusNotifierItem item or the Task Up
+            // UltraLite item role group, then its identifier is the role and it
+            // can just be added to the resolved box order.
+            if (!itemSettingsId.startsWith("appindicator-kstatusnotifieritem-") &&
+                itemSettingsId !== "item-role-group-task-up-ultralite") {
                 resolvedBoxOrderItem.role = resolvedBoxOrderItem.settingsId;
                 resolvedBoxOrder.push(resolvedBoxOrderItem);
                 continue;
@@ -181,8 +206,13 @@ export default class BoxOrderManager extends GObject.Object {
             // If the items settings identifier indicates otherwise, then handle
             // the item specially.
 
-            // Get the roles roles associated with the items settings id.
-            let roles = this.#appIndicatorItemSettingsIdToRolesMap.get(resolvedBoxOrderItem.settingsId);
+            // Get the roles associated with the items settings id.
+            let roles = [];
+            if (itemSettingsId.startsWith("appindicator-kstatusnotifieritem-")) {
+                roles = this.#appIndicatorItemSettingsIdToRolesMap.get(resolvedBoxOrderItem.settingsId);
+            } else if (itemSettingsId === "item-role-group-task-up-ultralite") {
+                roles = this.#taskUpUltraLiteItemRoles;
+            }
 
             // If there are no roles associated, continue.
             if (!roles) {
@@ -217,8 +247,8 @@ export default class BoxOrderManager extends GObject.Object {
 
     /**
      * Gets a valid box order for the given top bar box, where all AppIndicator
-     * items got resolved and where only items are included, which are in some
-     * GNOME Shell top bar box.
+     * and Task Up UltraLite items got resolved and where only items are
+     * included, which are in some GNOME Shell top bar box.
      * The items of the box order also have additional information stored.
      * @param {string} box - The top bar box to return the valid box order for.
      * Must be one of the following values:
@@ -308,10 +338,10 @@ export default class BoxOrderManager extends GObject.Object {
 
                 // Then get a settings identifier for the item.
                 let itemSettingsId;
-                // If the role indicates that the item is an
-                // AppIndicator/KStatusNotifierItem item, then handle it
-                // differently
                 if (role.startsWith("appindicator-")) {
+                    // If the role indicates that the item is an
+                    // AppIndicator/KStatusNotifierItem item, then handle it
+                    // differently.
                     try {
                         itemSettingsId = this.#handleAppIndicatorItem(indicatorContainer, role);
                     } catch (e) {
@@ -320,6 +350,10 @@ export default class BoxOrderManager extends GObject.Object {
                         }
                         continue;
                     }
+                } else if (role.startsWith("task-button-")) {
+                    // If the role indicates that the item is a Task Up
+                    // UltraLite item, then handle it differently.
+                    itemSettingsId = this.#handleTaskUpUltraLiteItem(role);
                 } else { // Otherwise just use the role as the settings identifier.
                     itemSettingsId = role;
                 }

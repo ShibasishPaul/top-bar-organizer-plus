@@ -47,6 +47,10 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
             // Set the title to something nicer, if the associated item is an
             // AppIndicator/KStatusNotifierItem item.
             this.set_title(item.replace("appindicator-kstatusnotifieritem-", ""));
+        } else if (item === "item-role-group-task-up-ultralite") {
+            // Set the title to something nicer, if the item in question is the
+            // Task Up UltraLite item role group.
+            this.set_title("Task Up UltraLite Items");
         } else {
             // Otherwise just set it to `item`.
             this.set_title(item);
