@@ -215,13 +215,8 @@ export default class BoxOrderManager extends GObject.Object {
                 roles = this.#taskUpUltraLiteItemRoles;
             }
 
-            // If there are no roles associated, continue.
-            if (roles.length === 0) {
-                continue;
-            }
-
-            // Otherwise create a new resolved box order item for each role and
-            // add it to the resolved box order.
+            // Create a new resolved box order item for each role and add it to
+            // the resolved box order.
             for (const role of roles) {
                 const newResolvedBoxOrderItem = JSON.parse(JSON.stringify(resolvedBoxOrderItem));
                 newResolvedBoxOrderItem.role = role;
