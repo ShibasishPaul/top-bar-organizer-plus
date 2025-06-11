@@ -259,20 +259,15 @@ export default class BoxOrderManager extends GObject.Object {
         // Get a resolved box order.
         let resolvedBoxOrder = this.#getResolvedBoxOrder(box);
 
-        // ToDo: simplify.
         // Get the indicator containers (of the items) currently present in the
         // GNOME Shell top bar.
         // They should be St.Bins (see link), so ensure that using a filter.
         // https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/48.2/js/ui/panelMenu.js?ref_type=tags#L21
-        const indicatorContainers = [
+        const indicatorContainers = new Set([
             (Main.panel as CustomPanel)._leftBox.get_children(),
             (Main.panel as CustomPanel)._centerBox.get_children(),
             (Main.panel as CustomPanel)._rightBox.get_children(),
-        ].flat().filter(ic => ic instanceof St.Bin);
-
-        // Create an indicator containers set from the indicator containers for
-        // fast easy access.
-        const indicatorContainerSet = new Set(indicatorContainers);
+        ].flat().filter(ic => ic instanceof St.Bin));
 
         // Go through the resolved box order and only add items to the valid box
         // order, where their indicator is currently present in the GNOME Shell
@@ -285,7 +280,7 @@ export default class BoxOrderManager extends GObject.Object {
                 continue;
             }
 
-            if (indicatorContainerSet.has(associatedIndicatorContainer)) {
+            if (indicatorContainers.has(associatedIndicatorContainer)) {
                 validBoxOrder.push(item);
             }
         }
