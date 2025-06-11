@@ -2,6 +2,7 @@
   "name": "top-bar-organizer",
   "version": "1.0.0",
   "description": "A Gnome Shell Extension for organizing your Gnome Shell top bar.",
+  "type": "module",
   "directories": {
     "doc": "docs"
   },
@@ -12,6 +13,12 @@
   "author": "June",
   "license": "GPL-3.0-or-later",
   "devDependencies": {
-    "eslint": "^8.50.0"
+    "eslint": "^8.57.1",
+    "eslint-plugin-jsdoc": "^50.7.1",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@girs/gjs": "^4.0.0-beta.23",
+    "@girs/gnome-shell": "^48.0.2"
   }
 }

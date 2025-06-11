@@ -1,13 +1,27 @@
 "use strict";
 
+import St from "gi://St"
+import type Gio from "gi://Gio"
+
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as Panel from "resource:///org/gnome/shell/ui/panel.js";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
 import BoxOrderManager from "./extensionModules/BoxOrderManager.js";
+import type { Box } from "./extensionModules/BoxOrderManager.js";
+
+export interface CustomPanel extends Panel.Panel {
+    _leftBox: St.BoxLayout;
+    _centerBox: St.BoxLayout;
+    _rightBox: St.BoxLayout;
+}
 
 export default class TopBarOrganizerExtension extends Extension {
-    enable() {
+    _settings!: Gio.Settings;
+    _boxOrderManager!: BoxOrderManager;
+    _settingsHandlerIds!: number[];
+
+    enable(): void {
         this._settings = this.getSettings();
 
         this._boxOrderManager = new BoxOrderManager({}, this._settings);
@@ -26,7 +40,7 @@ export default class TopBarOrganizerExtension extends Extension {
 
         // Handle changes of settings.
         this._settingsHandlerIds = [];
-        const addSettingsChangeHandler = (settingsName) => {
+        const addSettingsChangeHandler = (settingsName: string) => {
             const handlerId = this._settings.connect(`changed::${settingsName}`, () => {
                 this.#handleNewItemsAndOrderTopBar();
             });
@@ -39,10 +53,12 @@ export default class TopBarOrganizerExtension extends Extension {
         addSettingsChangeHandler("show");
     }
 
-    disable() {
+    disable(): void {
         // Revert the overwrite of `Panel._addToPanelBox`.
+        // @ts-ignore
         Panel.Panel.prototype._addToPanelBox = Panel.Panel.prototype._originalAddToPanelBox;
         // Set `Panel._originalAddToPanelBox` to `undefined`.
+        // @ts-ignore
         Panel.Panel.prototype._originalAddToPanelBox = undefined;
 
         // Disconnect signals.
@@ -51,7 +67,9 @@ export default class TopBarOrganizerExtension extends Extension {
         }
         this._boxOrderManager.disconnectSignals();
 
+        // @ts-ignore
         this._settings = null;
+        // @ts-ignore
         this._boxOrderManager = null;
     }
 
@@ -63,9 +81,10 @@ export default class TopBarOrganizerExtension extends Extension {
      * Overwrite `Panel._addToPanelBox` with a custom method, which simply calls
      * the original one and handles new items and orders the top bar afterwards.
      */
-    #overwritePanelAddToPanelBox() {
+    #overwritePanelAddToPanelBox(): void {
         // Add the original `Panel._addToPanelBox` method as
         // `Panel._originalAddToPanelBox`.
+        // @ts-ignore
         Panel.Panel.prototype._originalAddToPanelBox = Panel.Panel.prototype._addToPanelBox;
 
         const handleNewItemsAndOrderTopBar = () => {
@@ -76,6 +95,7 @@ export default class TopBarOrganizerExtension extends Extension {
         Panel.Panel.prototype._addToPanelBox = function(role, indicator, position, box) {
             // Simply call the original `_addToPanelBox` and order the top bar
             // and handle new items afterwards.
+            // @ts-ignore
             this._originalAddToPanelBox(role, indicator, position, box);
             handleNewItemsAndOrderTopBar();
         };
@@ -88,9 +108,9 @@ export default class TopBarOrganizerExtension extends Extension {
     /**
      * This method orders the top bar items of the specified box according to
      * the configured box orders.
-     * @param {string} box - The box to order.
+     * @param {Box} box - The box to order.
      */
-    #orderTopBarItems(box) {
+    #orderTopBarItems(box: Box): void {
         // Only run, when the session mode is "user" or the parent session mode
         // is "user".
         if(Main.sessionMode.currentMode !== "user" && Main.sessionMode.parentMode !== "user") {
@@ -104,13 +124,13 @@ export default class TopBarOrganizerExtension extends Extension {
         let panelBox;
         switch (box) {
             case "left":
-                panelBox = Main.panel._leftBox;
+                panelBox = (Main.panel as CustomPanel)._leftBox;
                 break;
             case "center":
-                panelBox = Main.panel._centerBox;
+                panelBox = (Main.panel as CustomPanel)._centerBox;
                 break;
             case "right":
-                panelBox = Main.panel._rightBox;
+                panelBox = (Main.panel as CustomPanel)._rightBox;
                 break;
         }
 
@@ -119,12 +139,19 @@ export default class TopBarOrganizerExtension extends Extension {
         for (let i = 0; i < validBoxOrder.length; i++) {
             const item = validBoxOrder[i];
             // Get the indicator container associated with the current role.
-            const associatedIndicatorContainer = Main.panel.statusArea[item.role].container;
+            const associatedIndicatorContainer = (Main.panel.statusArea as any)[item.role]?.container;
+            if (!(associatedIndicatorContainer instanceof St.Bin)) {
+                // TODO: maybe add logging
+                continue;
+            }
 
             // Save whether or not the indicator container is visible.
             const isVisible = associatedIndicatorContainer.visible;
 
-            associatedIndicatorContainer.get_parent().remove_child(associatedIndicatorContainer);
+            const parent = associatedIndicatorContainer.get_parent();
+            if (parent !== null) {
+                parent.remove_child(associatedIndicatorContainer);
+            }
             if (box === "right") {
                 // If the target panel box is the right panel box, insert the
                 // indicator container at index `-1`, which just adds it to the
@@ -165,7 +192,7 @@ export default class TopBarOrganizerExtension extends Extension {
      * This method handles all new items currently present in the top bar and
      * orders the items of all top bar boxes.
      */
-    #handleNewItemsAndOrderTopBar() {
+    #handleNewItemsAndOrderTopBar(): void {
         // Only run, when the session mode is "user" or the parent session mode
         // is "user".
         if(Main.sessionMode.currentMode !== "user" && Main.sessionMode.parentMode !== "user") {

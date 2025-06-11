@@ -3,6 +3,7 @@
 import Gtk from "gi://Gtk";
 import GObject from "gi://GObject";
 import GLib from "gi://GLib";
+import type Gio from "gi://Gio";
 
 import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
@@ -25,14 +26,15 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
             },
             Signals: {
                 "row-move": {
-                    param_types: [PrefsBoxOrderItemRow, GObject.TYPE_STRING],
+                    param_types: [PrefsBoxOrderItemRow.$gtype, GObject.TYPE_STRING],
                 },
             },
         }, this);
     }
 
-    #settings;
-    #rowSignalHandlerIds = new Map();
+    _boxOrder!: string;
+    #settings: Gio.Settings;
+    #rowSignalHandlerIds = new Map<PrefsBoxOrderItemRow, number[]>();
 
     /**
      * @param {Object} params
@@ -41,18 +43,18 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
         super(params);
 
         // Load the settings.
-        this.#settings = ExtensionPreferences.lookupByURL(import.meta.url).getSettings();
+        this.#settings = ExtensionPreferences.lookupByURL(import.meta.url)!.getSettings();
 
         // Add a placeholder widget for the case, where no GtkListBoxRows are
         // present.
         this.set_placeholder(new PrefsBoxOrderListEmptyPlaceholder());
     }
 
-    get boxOrder() {
+    get boxOrder(): string {
         return this._boxOrder;
     }
 
-    set boxOrder(value) {
+    set boxOrder(value: string) {
         this._boxOrder = value;
 
         // Get the actual box order for the given box order name from settings.
@@ -73,10 +75,10 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
      * position.
      * Also handles stuff like connecting signals.
      */
-    insertRow(row, position) {
+    insertRow(row: PrefsBoxOrderItemRow, position: number): void {
         this.insert(row, position);
 
-        const signalHandlerIds = [];
+        const signalHandlerIds: number[] = [];
         signalHandlerIds.push(row.connect("move", (row, direction) => {
             this.emit("row-move", row, direction);
         }));
@@ -88,8 +90,8 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
      * Removes the given PrefsBoxOrderItemRow from this list box.
      * Also handles stuff like disconnecting signals.
      */
-    removeRow(row) {
-        const signalHandlerIds = this.#rowSignalHandlerIds.get(row);
+    removeRow(row: PrefsBoxOrderItemRow): void {
+        const signalHandlerIds = this.#rowSignalHandlerIds.get(row) ?? [];
 
         for (const id of signalHandlerIds) {
             row.disconnect(id);
@@ -102,11 +104,11 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
      * Saves the box order represented by `this` (and its
      * `PrefsBoxOrderItemRows`) to settings.
      */
-    saveBoxOrderToSettings() {
-        let currentBoxOrder = [];
+    saveBoxOrderToSettings(): void {
+        let currentBoxOrder: string[] = [];
         for (let potentialPrefsBoxOrderItemRow of this) {
             // Only process PrefsBoxOrderItemRows.
-            if (potentialPrefsBoxOrderItemRow.constructor.$gtype.name !== "PrefsBoxOrderItemRow") {
+            if (!(potentialPrefsBoxOrderItemRow instanceof PrefsBoxOrderItemRow)) {
                 continue;
             }
 
@@ -120,10 +122,10 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
      * Determines whether or not each move action of each PrefsBoxOrderItemRow
      * should be enabled or disabled.
      */
-    determineRowMoveActionEnable() {
+    determineRowMoveActionEnable(): void {
         for (let potentialPrefsBoxOrderItemRow of this) {
             // Only process PrefsBoxOrderItemRows.
-            if (potentialPrefsBoxOrderItemRow.constructor.$gtype.name !== "PrefsBoxOrderItemRow") {
+            if (!(potentialPrefsBoxOrderItemRow instanceof PrefsBoxOrderItemRow)) {
                 continue;
             }
 

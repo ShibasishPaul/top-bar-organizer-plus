@@ -6,6 +6,8 @@ import GObject from "gi://GObject";
 import Adw from "gi://Adw";
 import GLib from "gi://GLib";
 
+import type PrefsBoxOrderListBox from "./PrefsBoxOrderListBox.js";
+
 export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
     static {
         GObject.registerClass({
@@ -18,8 +20,8 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
             },
         }, this);
         this.install_action("row.forget", null, (self, _actionName, _param) => {
-            const parentListBox = self.get_parent();
-            parentListBox.removeRow(self);
+            const parentListBox = self.get_parent() as PrefsBoxOrderListBox;
+            parentListBox.removeRow(self as PrefsBoxOrderItemRow);
             parentListBox.saveBoxOrderToSettings();
             parentListBox.determineRowMoveActionEnable();
         });
@@ -27,39 +29,32 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
         this.install_action("row.move-down", null, (self, _actionName, _param) => self.emit("move", "down"));
     }
 
-    #drag_starting_point_x;
-    #drag_starting_point_y;
+    item: string;
+    #drag_starting_point_x?: number;
+    #drag_starting_point_y?: number;
 
-    constructor(params = {}, item) {
+    constructor(params = {}, item: string) {
         super(params);
 
-        this.#associateItem(item);
-    }
-
-    /**
-     * Associate `this` with an item.
-     * @param {String} item
-     */
-    #associateItem(item) {
+        // Associate `this` with an item.
         this.item = item;
-
-        if (item.startsWith("appindicator-kstatusnotifieritem-")) {
+        if (this.item.startsWith("appindicator-kstatusnotifieritem-")) {
             // Set the title to something nicer, if the associated item is an
             // AppIndicator/KStatusNotifierItem item.
-            this.set_title(item.replace("appindicator-kstatusnotifieritem-", ""));
-        } else if (item === "item-role-group-task-up-ultralite") {
+            this.set_title(this.item.replace("appindicator-kstatusnotifieritem-", ""));
+        } else if (this.item === "item-role-group-task-up-ultralite") {
             // Set the title to something nicer, if the item in question is the
             // Task Up UltraLite item role group.
             this.set_title("Task Up UltraLite Items");
         } else {
             // Otherwise just set it to `item`.
-            this.set_title(item);
+            this.set_title(this.item);
         }
     }
 
-    onDragPrepare(_source, x, y) {
+    onDragPrepare(_source: Gtk.DragSource, x: number, y: number): Gdk.ContentProvider {
         const value = new GObject.Value();
-        value.init(PrefsBoxOrderItemRow);
+        value.init(PrefsBoxOrderItemRow.$gtype);
         value.set_object(this);
 
         this.#drag_starting_point_x = x;
@@ -67,7 +62,7 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
         return Gdk.ContentProvider.new_for_value(value);
     }
 
-    onDragBegin(_source, drag) {
+    onDragBegin(_source: Gtk.DragSource, drag: Gdk.Drag): void {
         let dragWidget = new Gtk.ListBox();
         let allocation = this.get_allocation();
         dragWidget.set_size_request(allocation.width, allocation.height);
@@ -78,20 +73,32 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
 
         let currentDragIcon = Gtk.DragIcon.get_for_drag(drag);
         currentDragIcon.set_child(dragWidget);
-        drag.set_hotspot(this.#drag_starting_point_x, this.#drag_starting_point_y);
+        // Even tho this should always be the case, ensure the values for the hotspot aren't undefined.
+        if (typeof this.#drag_starting_point_x !== "undefined" &&
+            typeof this.#drag_starting_point_y !== "undefined") {
+            drag.set_hotspot(this.#drag_starting_point_x, this.#drag_starting_point_y);
+        }
     }
 
     // Handle a new drop on `this` properly.
     // `value` is the thing getting dropped.
-    onDrop(_target, value, _x, _y) {
+    onDrop(_target: Gtk.DropTarget, value: any, _x: number, _y: number): boolean {
+        // According to the type annotations of Gtk.DropTarget, value is of type
+        // GObject.Value, so ensure the one we work with is of type
+        // PrefsBoxOrderItemRow.
+        if (!(value instanceof PrefsBoxOrderItemRow)) {
+            // TODO: maybe add logging
+            return false;
+        }
+
         // If `this` got dropped onto itself, do nothing.
         if (value === this) {
             return false;
         }
 
         // Get the GtkListBoxes of `this` and the drop value.
-        const ownListBox = this.get_parent();
-        const valueListBox = value.get_parent();
+        const ownListBox = this.get_parent() as PrefsBoxOrderListBox;
+        const valueListBox = value.get_parent() as PrefsBoxOrderListBox;
 
         // Get the position of `this` and the drop value.
         const ownPosition = this.get_index();

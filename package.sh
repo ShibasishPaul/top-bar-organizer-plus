@@ -4,7 +4,11 @@ set -e
 
 REAL_BASE_DIR=$( dirname $( readlink -f "$0" ))
 
-gnome-extensions pack "$REAL_BASE_DIR/src" \
+rm -rf "$REAL_BASE_DIR/dist"
+cd "$REAL_BASE_DIR"
+npx tsc
+cp "$REAL_BASE_DIR/src/metadata.json" "$REAL_BASE_DIR/dist/metadata.json"
+gnome-extensions pack "$REAL_BASE_DIR/dist" \
     --force \
     --extra-source extensionModules \
     --extra-source prefsModules \

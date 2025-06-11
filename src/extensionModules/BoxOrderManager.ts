@@ -1,18 +1,24 @@
 "use strict";
 
 import GObject from "gi://GObject";
+import St from "gi://St";
+import type Gio from "gi://Gio";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
+import type { CustomPanel } from "../extension.js"
+
+export type Box = "left" | "center" | "right";
+type Hide = "hide" | "show" | "default";
 /**
  * A resolved box order item containing the items role, settings identifier and
  * additional information.
- * @typedef {Object} ResolvedBoxOrderItem
- * @property {string} settingsId - The settings identifier of the item.
- * @property {string} role - The role of the item.
- * @property {string} hide - Whether the item should be (forcefully) hidden
- * (hide), shown (show) or just be left as is (default).
  */
+interface ResolvedBoxOrderItem {
+    settingsId: string // The settings identifier of the item.
+    role: string // The role of the item.
+    hide: Hide // Whether the item should be (forcefully) hidden, (forcefully) shown or just be left as is.
+}
 
 /**
  * This class provides an interfaces to the box orders stored in settings.
@@ -30,12 +36,15 @@ export default class BoxOrderManager extends GObject.Object {
         }, this);
     }
 
-    #appIndicatorReadyHandlerIdMap;
-    #appIndicatorItemSettingsIdToRolesMap;
-    #taskUpUltraLiteItemRoles;
-    #settings;
+    // Can't have type guarantees here, since this is working with types from
+    // the KStatusNotifier/AppIndicator extension.
+    #appIndicatorReadyHandlerIdMap: Map<any, any>;
+    #appIndicatorItemSettingsIdToRolesMap: Map<string, string[]>;
+    #taskUpUltraLiteItemRoles: string[];
+    #settings: Gio.Settings;
 
-    constructor(params = {}, settings) {
+    constructor(params = {}, settings: Gio.Settings) {
+        // @ts-ignore Params should be passed, see: https://gjs.guide/guides/gobject/subclassing.html#subclassing-gobject
         super(params);
 
         this.#appIndicatorReadyHandlerIdMap = new Map();
@@ -47,30 +56,22 @@ export default class BoxOrderManager extends GObject.Object {
 
     /**
      * Gets a box order for the given top bar box from settings.
-     * @param {string} box - The top bar box for which to get the box order.
-     * Must be one of the following values:
-     * - "left"
-     * - "center"
-     * - "right"
+     * @param {Box} box - The top bar box for which to get the box order.
      * @returns {string[]} - The box order consisting of an array of item
      * settings identifiers.
      */
-    #getBoxOrder(box) {
+    #getBoxOrder(box: Box): string[] {
         return this.#settings.get_strv(`${box}-box-order`);
     }
 
     /**
      * Save the given box order to settings, making sure to only save a changed
      * box order, to avoid loops when listening on settings changes.
-     * @param {string} box - The top bar box for which to save the box order.
-     * Must be one of the following values:
-     * - "left"
-     * - "center"
-     * - "right"
+     * @param {Box} box - The top bar box for which to save the box order.
      * @param {string[]} boxOrder - The box order to save. Must be an array of
      * item settings identifiers.
      */
-    #saveBoxOrder(box, boxOrder) {
+    #saveBoxOrder(box: Box, boxOrder: string[]): void {
         const currentBoxOrder = this.#getBoxOrder(box);
 
         // Only save the given box order to settings, if it is different, to
@@ -90,14 +91,18 @@ export default class BoxOrderManager extends GObject.Object {
      * then also makes sure that once the app indicators "ready" signal emits,
      * this classes "appIndicatorReady" signal emits as well, such that it and
      * other methods can be called again to properly handle the item.
-     * @param {string} indicatorContainer - The container of the indicator of the
+     * @param {St.Bin} indicatorContainer - The container of the indicator of the
      * AppIndicator/KStatusNotifierItem item.
      * @param {string} role - The role of the AppIndicator/KStatusNotifierItem
      * item.
      * @returns {string} The derived items settings identifier.
      */
-    #handleAppIndicatorItem(indicatorContainer, role) {
-        const appIndicator = indicatorContainer.get_child()._indicator;
+    #handleAppIndicatorItem(indicatorContainer: St.Bin, role: string): string {
+        // Since this is working with types from the
+        // AppIndicator/KStatusNotifierItem extension, we loose a bunch of type
+        // safety here.
+        // https://github.com/ubuntu/gnome-shell-extension-appindicator
+        const appIndicator = (indicatorContainer.get_child() as any)._indicator;
         let application = appIndicator.id;
 
         if (!application && this.#appIndicatorReadyHandlerIdMap) {
@@ -146,7 +151,7 @@ export default class BoxOrderManager extends GObject.Object {
      * @param {string} role - The role of the Task Up UltraLite item.
      * @returns {string} The settings identifier to use.
      */
-    #handleTaskUpUltraLiteItem(role) {
+    #handleTaskUpUltraLiteItem(role: string): string {
         const roles = this.#taskUpUltraLiteItemRoles;
 
         if (!roles.includes(role)) {
@@ -162,14 +167,10 @@ export default class BoxOrderManager extends GObject.Object {
      * meaning they might be present multiple times or not at all depending on
      * the roles stored.
      * The items of the box order also have additional information stored.
-     * @param {string} box - The top bar box for which to get the resolved box order.
-     * Must be one of the following values:
-     * - "left"
-     * - "center"
-     * - "right"
+     * @param {Box} box - The top bar box for which to get the resolved box order.
      * @returns {ResolvedBoxOrderItem[]} - The resolved box order.
      */
-    #getResolvedBoxOrder(box) {
+    #getResolvedBoxOrder(box: Box): ResolvedBoxOrderItem[] {
         let boxOrder = this.#getBoxOrder(box);
 
         const itemsToHide = this.#settings.get_strv("hide");
@@ -207,15 +208,15 @@ export default class BoxOrderManager extends GObject.Object {
             // the item specially.
 
             // Get the roles associated with the items settings id.
-            let roles = [];
+            let roles: string[] = [];
             if (itemSettingsId.startsWith("appindicator-kstatusnotifieritem-")) {
-                roles = this.#appIndicatorItemSettingsIdToRolesMap.get(resolvedBoxOrderItem.settingsId);
+                roles = this.#appIndicatorItemSettingsIdToRolesMap.get(resolvedBoxOrderItem.settingsId) ?? [];
             } else if (itemSettingsId === "item-role-group-task-up-ultralite") {
                 roles = this.#taskUpUltraLiteItemRoles;
             }
 
             // If there are no roles associated, continue.
-            if (!roles) {
+            if (roles.length === 0) {
                 continue;
             }
 
@@ -236,12 +237,13 @@ export default class BoxOrderManager extends GObject.Object {
      * This is typically used before nulling an instance of this class to make
      * sure all signals are disconnected.
      */
-    disconnectSignals() {
+    disconnectSignals(): void {
         for (const [handlerId, appIndicator] of this.#appIndicatorReadyHandlerIdMap) {
             if (handlerId && appIndicator?.signalHandlerIsConnected(handlerId)) {
                 appIndicator.disconnect(handlerId);
             }
         }
+        // @ts-ignore
         this.#appIndicatorReadyHandlerIdMap = null;
     }
 
@@ -250,25 +252,23 @@ export default class BoxOrderManager extends GObject.Object {
      * and Task Up UltraLite items got resolved and where only items are
      * included, which are in some GNOME Shell top bar box.
      * The items of the box order also have additional information stored.
-     * @param {string} box - The top bar box to return the valid box order for.
-     * Must be one of the following values:
-     * - "left"
-     * - "center"
-     * - "right"
+     * @param {Box} box - The top bar box to return the valid box order for.
      * @returns {ResolvedBoxOrderItem[]} - The valid box order.
      */
-    getValidBoxOrder(box) {
+    getValidBoxOrder(box: Box): ResolvedBoxOrderItem[] {
         // Get a resolved box order.
         let resolvedBoxOrder = this.#getResolvedBoxOrder(box);
 
         // ToDo: simplify.
         // Get the indicator containers (of the items) currently present in the
         // GNOME Shell top bar.
+        // They should be St.Bins (see link), so ensure that using a filter.
+        // https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/48.2/js/ui/panelMenu.js?ref_type=tags#L21
         const indicatorContainers = [
-            Main.panel._leftBox.get_children(),
-            Main.panel._centerBox.get_children(),
-            Main.panel._rightBox.get_children(),
-        ].flat();
+            (Main.panel as CustomPanel)._leftBox.get_children(),
+            (Main.panel as CustomPanel)._centerBox.get_children(),
+            (Main.panel as CustomPanel)._rightBox.get_children(),
+        ].flat().filter(ic => ic instanceof St.Bin);
 
         // Create an indicator containers set from the indicator containers for
         // fast easy access.
@@ -277,10 +277,13 @@ export default class BoxOrderManager extends GObject.Object {
         // Go through the resolved box order and only add items to the valid box
         // order, where their indicator is currently present in the GNOME Shell
         // top bar.
-        let validBoxOrder = [];
+        let validBoxOrder: ResolvedBoxOrderItem[] = [];
         for (const item of resolvedBoxOrder) {
-            // Get the indicator container associated with the items role.
-            const associatedIndicatorContainer = Main.panel.statusArea[item.role]?.container;
+            const associatedIndicatorContainer = (Main.panel.statusArea as any)[item.role]?.container;
+            if (!(associatedIndicatorContainer instanceof St.Bin)) {
+                // TODO: maybe add logging
+                continue;
+            }
 
             if (indicatorContainerSet.has(associatedIndicatorContainer)) {
                 validBoxOrder.push(item);
@@ -294,7 +297,7 @@ export default class BoxOrderManager extends GObject.Object {
      * This method saves all new items currently present in the GNOME Shell top
      * bar to the settings.
      */
-    saveNewTopBarItems() {
+    saveNewTopBarItems(): void {
         // Only run, when the session mode is "user" or the parent session mode
         // is "user".
         if (Main.sessionMode.currentMode !== "user" && Main.sessionMode.parentMode !== "user") {
@@ -310,24 +313,31 @@ export default class BoxOrderManager extends GObject.Object {
 
         // Get roles (of items) currently present in the GNOME Shell top bar and
         // index them using their associated indicator container.
-        let indicatorContainerRoleMap = new Map();
-        for (const role in Main.panel.statusArea) {
-            indicatorContainerRoleMap.set(Main.panel.statusArea[role].container, role);
+        let indicatorContainerRoleMap = new Map<St.Bin, string>();
+        for (const role in (Main.panel.statusArea as any)) {
+            const associatedIndicatorContainer = (Main.panel.statusArea as any)[role]?.container;
+            if (!(associatedIndicatorContainer instanceof St.Bin)) {
+                // TODO: maybe add logging
+                continue;
+            }
+            indicatorContainerRoleMap.set(associatedIndicatorContainer, role);
         }
 
         // Get the indicator containers (of the items) currently present in the
         // GNOME Shell top bar boxes.
+        // They should be St.Bins (see link), so ensure that using a filter.
+        // https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/48.2/js/ui/panelMenu.js?ref_type=tags#L21
         const boxIndicatorContainers = {
-            left: Main.panel._leftBox.get_children(),
-            center: Main.panel._centerBox.get_children(),
+            left: (Main.panel as CustomPanel)._leftBox.get_children().filter(ic => ic instanceof St.Bin),
+            center: (Main.panel as CustomPanel)._centerBox.get_children().filter(ic => ic instanceof St.Bin),
             // Reverse this array, since the items in the left and center box
             // are logically LTR, while the items in the right box are RTL.
-            right: Main.panel._rightBox.get_children().reverse(),
+            right: (Main.panel as CustomPanel)._rightBox.get_children().filter(ic => ic instanceof St.Bin).reverse(),
         };
 
         // This function goes through the indicator containers of the given box
         // and adds new item settings identifiers to the given box order.
-        const addNewItemSettingsIdsToBoxOrder = (indicatorContainers, boxOrder, box) => {
+        const addNewItemSettingsIdsToBoxOrder = (indicatorContainers: St.Bin[], boxOrder: string[], box: Box) => {
             for (const indicatorContainer of indicatorContainers) {
                 // First get the role associated with the current indicator
                 // container.
@@ -345,6 +355,9 @@ export default class BoxOrderManager extends GObject.Object {
                     try {
                         itemSettingsId = this.#handleAppIndicatorItem(indicatorContainer, role);
                     } catch (e) {
+                        if (!(e instanceof Error)) {
+                            throw(e);
+                        }
                         if (e.message !== "Application can't be determined.") {
                             throw(e);
                         }

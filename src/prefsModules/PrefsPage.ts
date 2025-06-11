@@ -1,5 +1,6 @@
 "use strict";
 
+import Gdk from "gi://Gdk";
 import Gtk from "gi://Gtk";
 import GObject from "gi://GObject";
 import Adw from "gi://Adw";
@@ -7,6 +8,7 @@ import GLib from "gi://GLib";
 
 import ScrollManager from "./ScrollManager.js";
 import PrefsBoxOrderListEmptyPlaceholder from "./PrefsBoxOrderListEmptyPlaceholder.js";
+import type PrefsBoxOrderItemRow from "./PrefsBoxOrderItemRow.js";
 
 // Imports to make UI file work.
 // eslint-disable-next-line
@@ -25,6 +27,11 @@ export default class PrefsPage extends Adw.PreferencesPage {
         }, this);
     }
 
+    _dndEnded?: boolean;
+    declare _left_box_order_list_box: PrefsBoxOrderListBox;
+    declare _center_box_order_list_box: PrefsBoxOrderListBox;
+    declare _right_box_order_list_box: PrefsBoxOrderListBox;
+
     constructor(params = {}) {
         super(params);
 
@@ -37,23 +44,27 @@ export default class PrefsPage extends Adw.PreferencesPage {
      * operation is in progress and the user has their cursor either in the
      * upper or lower 10% of this widget respectively.
      */
-    #setupDNDScroll() {
+    #setupDNDScroll(): void {
         // Pass `this.get_first_child()` to the ScrollManager, since this
         // `PrefsPage` extends an `Adw.PreferencesPage` and the first child of
         // an `Adw.PreferencesPage` is the built-in `Gtk.ScrolledWindow`.
-        const scrollManager = new ScrollManager(this.get_first_child());
+        const scrollManager = new ScrollManager(this.get_first_child() as Gtk.ScrolledWindow);
 
         /// Setup GtkDropControllerMotion event controller and make use of its
         /// events.
         let controller = new Gtk.DropControllerMotion();
 
-        // Scroll, when the pointer is in the right places.
+        // Make sure scrolling stops, when DND operation ends.
+        this._dndEnded = true;
+
+        // Scroll, when the pointer is in the right places and a DND operation
+        // is properly set up (this._dndEnded is false).
         controller.connect("motion", (_, _x, y) => {
-            if (y <= this.get_allocated_height() * 0.1) {
+            if ((y <= this.get_allocated_height() * 0.1) && !this._dndEnded) {
                 // If the pointer is currently in the upper ten percent of this
                 // widget, then scroll up.
                 scrollManager.startScrollUp();
-            } else if (y >= this.get_allocated_height() * 0.9) {
+            } else if ((y >= this.get_allocated_height() * 0.9) && !this._dndEnded) {
                 // If the pointer is currently in the lower ten percent of this
                 // widget, then scroll down.
                 scrollManager.startScrollDown();
@@ -63,11 +74,9 @@ export default class PrefsPage extends Adw.PreferencesPage {
             }
         });
 
-        // Make sure scrolling stops, when DND operation ends.
-        this._dndEnded = true;
         const stopScrollAllAtDNDEnd = () => {
-            scrollManager.stopScrollAll();
             this._dndEnded = true;
+            scrollManager.stopScrollAll();
         };
         controller.connect("leave", () => {
             stopScrollAllAtDNDEnd();
@@ -76,7 +85,14 @@ export default class PrefsPage extends Adw.PreferencesPage {
             // Make use of `this._dndEnded` to setup stopScrollAtDNDEnd only
             // once per DND operation.
             if (this._dndEnded) {
-                let drag = controller.get_drop().get_drag();
+                const drag = controller.get_drop()?.get_drag() ?? null;
+                // Ensure we have a Gdk.Drag.
+                // If this is not the case for whatever reason, then don't start
+                // DND scrolling and just return.
+                if (!(drag instanceof Gdk.Drag)) {
+                    // TODO: maybe add logging
+                    return;
+                }
                 drag.connect("drop-performed", () => {
                     stopScrollAllAtDNDEnd();
                 });
@@ -93,7 +109,7 @@ export default class PrefsPage extends Adw.PreferencesPage {
         this.add_controller(controller);
     }
 
-    onRowMove(listBox, row, direction) {
+    onRowMove(listBox: PrefsBoxOrderListBox, row: PrefsBoxOrderItemRow, direction: string): void {
         const rowPosition = row.get_index();
 
         if (direction === "up") { // If the direction of the move is up.

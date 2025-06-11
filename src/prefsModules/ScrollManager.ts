@@ -1,23 +1,21 @@
 "use strict";
 
 import GLib from "gi://GLib";
+import type Gtk from "gi://Gtk";
 
 export default class ScrollManager {
-    #gtkScrolledWindow;
-    #scrollUp;
-    #scrollDown;
+    #gtkScrolledWindow: Gtk.ScrolledWindow;
+    #scrollUp: boolean;
+    #scrollDown: boolean;
 
-    /**
-     * @param {Gtk.ScrolledWindow} gtkScrolledWindow
-     */
-    constructor(gtkScrolledWindow) {
+    constructor(gtkScrolledWindow: Gtk.ScrolledWindow) {
         this.#gtkScrolledWindow = gtkScrolledWindow;
 
         this.#scrollUp = false;
         this.#scrollDown = false;
     }
 
-    startScrollUp() {
+    startScrollUp(): void {
         // If the scroll up is already started, don't do anything.
         if (this.#scrollUp) {
             return;
@@ -44,7 +42,7 @@ export default class ScrollManager {
         });
     }
 
-    startScrollDown() {
+    startScrollDown(): void {
         // If the scroll down is already started, don't do anything.
         if (this.#scrollDown) {
             return;
@@ -74,15 +72,15 @@ export default class ScrollManager {
         });
     }
 
-    stopScrollUp() {
+    stopScrollUp(): void {
         this.#scrollUp = false;
     }
 
-    stopScrollDown() {
+    stopScrollDown(): void {
         this.#scrollDown = false;
     }
 
-    stopScrollAll() {
+    stopScrollAll(): void {
         this.stopScrollUp();
         this.stopScrollDown();
     }

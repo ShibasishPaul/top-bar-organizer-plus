@@ -13,7 +13,7 @@ export default class TopBarOrganizerPreferences extends ExtensionPreferences {
         provider.load_from_path(this.metadata.dir.get_path() + "/css/prefs.css");
         const defaultGdkDisplay = Gdk.Display.get_default();
         Gtk.StyleContext.add_provider_for_display(
-            defaultGdkDisplay,
+            (defaultGdkDisplay as Gdk.Display),
             provider,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         );
@@ -22,7 +22,7 @@ export default class TopBarOrganizerPreferences extends ExtensionPreferences {
 
         prefsPage.connect("destroy", () => {
             Gtk.StyleContext.remove_provider_for_display(
-                defaultGdkDisplay,
+                (defaultGdkDisplay as Gdk.Display),
                 provider
             );
         });
