@@ -121,18 +121,7 @@ export default class TopBarOrganizerExtension extends Extension {
         const validBoxOrder = this._boxOrderManager.getValidBoxOrder(box);
 
         // Get the relevant box of `Main.panel`.
-        let panelBox;
-        switch (box) {
-            case "left":
-                panelBox = (Main.panel as CustomPanel)._leftBox;
-                break;
-            case "center":
-                panelBox = (Main.panel as CustomPanel)._centerBox;
-                break;
-            case "right":
-                panelBox = (Main.panel as CustomPanel)._rightBox;
-                break;
-        }
+        let panelBox = (Main.panel as CustomPanel)[`_${box}Box`];
 
         /// Go through the items of the validBoxOrder and order the GNOME Shell
         /// top bar box accordingly.
