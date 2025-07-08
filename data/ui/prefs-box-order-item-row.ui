@@ -48,6 +48,12 @@
         </section>
         <section>
             <item>
+                <attribute name="label">Options</attribute>
+                <attribute name="action">row.options</attribute>
+            </item>
+        </section>
+        <section>
+            <item>
                 <attribute name="label">Forget</attribute>
                 <attribute name="action">row.forget</attribute>
             </item>

@@ -6,6 +6,7 @@ import GObject from "gi://GObject";
 import Adw from "gi://Adw";
 import GLib from "gi://GLib";
 
+import PrefsBoxOrderItemOptionsDialog from "./PrefsBoxOrderItemOptionsDialog.js";
 import type PrefsBoxOrderListBox from "./PrefsBoxOrderListBox.js";
 
 export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
@@ -24,6 +25,15 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
             parentListBox.removeRow(self as PrefsBoxOrderItemRow);
             parentListBox.saveBoxOrderToSettings();
             parentListBox.determineRowMoveActionEnable();
+        });
+        this.install_action("row.options", null, (self, _actionName, _param) => {
+            const itemOptionsDialog = new PrefsBoxOrderItemOptionsDialog({
+                // Get the title from self as the constructor of
+                // PrefsBoxOrderItemRow already processes the item name into a
+                // nice title.
+                title: (self as PrefsBoxOrderItemRow).get_title()
+            }, (self as PrefsBoxOrderItemRow).item);
+            itemOptionsDialog.present(self);
         });
         this.install_action("row.move-up", null, (self, _actionName, _param) => self.emit("move", "up"));
         this.install_action("row.move-down", null, (self, _actionName, _param) => self.emit("move", "down"));
