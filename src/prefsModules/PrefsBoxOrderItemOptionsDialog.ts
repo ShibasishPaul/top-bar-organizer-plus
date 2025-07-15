@@ -30,6 +30,17 @@ export default class PrefsBoxOrderItemOptionsDialog extends Adw.Dialog {
         this.item = item;
         // Load the settings.
         this.#settings = ExtensionPreferences.lookupByURL(import.meta.url)!.getSettings();
+
+        // Set the selected visibility row choice to the settings value.
+        const itemsToHide = new Set(this.#settings.get_strv("hide"));
+        const itemsToShow = new Set(this.#settings.get_strv("show"));
+        if (itemsToHide.has(this.item)) {
+            this._visibility_row.set_selected(1);
+        } else if (itemsToShow.has(this.item)) {
+            this._visibility_row.set_selected(2);
+        } else {
+            this._visibility_row.set_selected(0);
+        }
     }
 
     onVisibilityRowSelectionChanged(): void {
