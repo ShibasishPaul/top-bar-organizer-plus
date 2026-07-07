@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-    <schema id="org.gnome.shell.extensions.top-bar-organizer" path="/org/gnome/shell/extensions/top-bar-organizer/">
+    <schema id="org.gnome.shell.extensions.top-bar-organizer-plus" path="/org/gnome/shell/extensions/top-bar-organizer-plus/">
         <key name="left-box-order" type="as">
             <description>Order of items in the left box of the top bar.</description>
             <default>[]</default>

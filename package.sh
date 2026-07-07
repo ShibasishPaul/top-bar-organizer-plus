@@ -14,4 +14,4 @@ gnome-extensions pack "$REAL_BASE_DIR/dist" \
     --extra-source prefsModules \
     --extra-source ../data/ui \
     --extra-source ../data/css \
-    --schema ../data/org.gnome.shell.extensions.top-bar-organizer.gschema.xml
+    --schema ../data/org.gnome.shell.extensions.top-bar-organizer-plus.gschema.xml
