@@ -1,0 +1,66 @@
+name: Release and Upload to EGO
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile TypeScript
+        run: npx tsc
+
+      - name: Copy metadata
+        run: cp src/metadata.json dist/metadata.json
+
+      - name: Package and Upload to EGO
+        uses: murar8/gnome-extensions-action@0.1.1
+        with:
+          source-dir: dist
+          extra-source: |
+            ../data/ui
+            ../data/css
+          schema: ../data/org.gnome.shell.extensions.top-bar-organizer-plus.gschema.xml
+          username: ${{ secrets.EGO_USERNAME }}
+          password: ${{ secrets.EGO_PASSWORD }}
+          accept-tos: true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-zip
+          path: "*.shell-extension.zip"
+
+  github-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.shell-extension.zip"
+          generate_release_notes: true
