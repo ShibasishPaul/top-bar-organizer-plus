@@ -172,26 +172,41 @@ export default class TopBarOrganizerExtension extends Extension {
             // Save whether or not the indicator container is visible.
             const isVisible = associatedIndicatorContainer.visible;
 
-            const parent = associatedIndicatorContainer.get_parent();
-            if (parent !== null) {
-                parent.remove_child(associatedIndicatorContainer);
-            }
-            if (box === "right") {
-                // If the target panel box is the right panel box, insert the
-                // indicator container at index `-1`, which just adds it to the
-                // end (correct order is ensured, since `validBoxOrder` is
-                // sorted correctly and we're looping over it in order).
-                // This way unaccounted-for indicator containers will be at the
-                // left, which is preferred, since the box is logically
-                // right-to-left.
-                // The same applies for indicator containers, which are just
-                // temporarily unaccounted for (like for indicator containers of
-                // not yet ready app indicators), since them being at the right
-                // for a probably temporary stay causes all the indicator
-                // containers to shift.
-                panelBox.insert_child_at_index(associatedIndicatorContainer, -1);
-            } else {
-                panelBox.insert_child_at_index(associatedIndicatorContainer, i);
+            // For the left/center boxes, `i` is a concrete target index, so
+            // it's possible to tell in advance whether reparenting would
+            // actually be a no-op and skip it — avoids touching the Clutter
+            // actor tree at all on reorder passes triggered by unrelated
+            // events (e.g. any other item being added anywhere in the top
+            // bar) once this item is already correctly placed.
+            // Not done for the right box: it always inserts at index `-1`
+            // ("whatever the end of the box's children currently is, right
+            // now"), not a fixed index, so there's no equally simple way to
+            // tell in advance whether a given item's insert this pass would
+            // actually be a no-op.
+            const alreadyAtIndex = box !== "right" && panelBox.get_child_at_index(i) === associatedIndicatorContainer;
+
+            if (!alreadyAtIndex) {
+                const parent = associatedIndicatorContainer.get_parent();
+                if (parent !== null) {
+                    parent.remove_child(associatedIndicatorContainer);
+                }
+                if (box === "right") {
+                    // If the target panel box is the right panel box, insert the
+                    // indicator container at index `-1`, which just adds it to the
+                    // end (correct order is ensured, since `validBoxOrder` is
+                    // sorted correctly and we're looping over it in order).
+                    // This way unaccounted-for indicator containers will be at the
+                    // left, which is preferred, since the box is logically
+                    // right-to-left.
+                    // The same applies for indicator containers, which are just
+                    // temporarily unaccounted for (like for indicator containers of
+                    // not yet ready app indicators), since them being at the right
+                    // for a probably temporary stay causes all the indicator
+                    // containers to shift.
+                    panelBox.insert_child_at_index(associatedIndicatorContainer, -1);
+                } else {
+                    panelBox.insert_child_at_index(associatedIndicatorContainer, i);
+                }
             }
 
             // Hide the indicator container...
