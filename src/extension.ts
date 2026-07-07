@@ -9,6 +9,7 @@ import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
 import BoxOrderManager from "./extensionModules/BoxOrderManager.js";
 import type { Box } from "./extensionModules/BoxOrderManager.js";
+import { FAMILIES, familyOrderKey } from "./Families.js";
 
 export interface CustomPanel extends Panel.Panel {
     _leftBox: St.BoxLayout;
@@ -78,6 +79,14 @@ export default class TopBarOrganizerExtension extends Extension {
         addSettingsChangeHandler("right-box-order");
         addSettingsChangeHandler("hide");
         addSettingsChangeHandler("show");
+        // A family's member order lives in its own `family-order-${id}` key,
+        // separate from the box-order keys above — reordering members within
+        // a family (e.g. on the Groups page) only ever touches this key, so
+        // without a handler here that reordering never triggers a re-order
+        // of the actual top bar.
+        for (const family of FAMILIES) {
+            addSettingsChangeHandler(familyOrderKey(family.id));
+        }
     }
 
     disable(): void {
