@@ -301,6 +301,22 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
+     * Gets the AppIndicator/KStatusNotifierItem application id (as derived by
+     * `handleAppIndicatorItem`, e.g. "Nextcloud") associated with the given
+     * role, if any is currently known.
+     * @param {string} role - The role to look up.
+     * @returns {string | undefined} The application id, if found.
+     */
+    getAppIndicatorApplicationId(role: string): string | undefined {
+        for (const [itemSettingsId, roles] of this.#appIndicatorItemSettingsIdToRolesMap) {
+            if (roles.includes(role)) {
+                return itemSettingsId.replace(/^appindicator-kstatusnotifieritem-/, "");
+            }
+        }
+        return undefined;
+    }
+
+    /**
      * Handles a family item by storing its role in that family's persisted
      * member order (if not already present) and returning the family's
      * settings identifier.

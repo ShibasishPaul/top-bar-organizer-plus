@@ -93,6 +93,7 @@ export default class TopBarOrganizerExtension extends Extension {
         addSettingsChangeHandler("hide");
         addSettingsChangeHandler("show");
         addSettingsChangeHandler("appindicator-order-mode");
+        addSettingsChangeHandler("appindicator-order-exceptions");
         // A family's member order lives in its own `family-order-${id}` key,
         // separate from the box-order keys above — reordering members within
         // a family (e.g. on the Groups page) only ever touches this key, so
@@ -308,7 +309,17 @@ export default class TopBarOrganizerExtension extends Extension {
             // actually be a no-op.
             const alreadyAtIndex = box !== "right" && panelBox.get_child_at_index(i) === associatedIndicatorContainer;
 
-            if (!alreadyAtIndex) {
+            // "full" mode AppIndicator/KStatusNotifierItem items can be
+            // individually excluded from reordering (residual-risk opt-in
+            // left for the user to control per app). Skipping the reparent
+            // for one entry doesn't require recomputing indices for the
+            // others: they still get placed correctly around it, this one
+            // just keeps whatever position it currently has.
+            const applicationId = this._boxOrderManager.getAppIndicatorApplicationId(item.role);
+            const isExcepted = applicationId !== undefined &&
+                this._settings.get_strv("appindicator-order-exceptions").includes(applicationId);
+
+            if (!alreadyAtIndex && !isExcepted) {
                 const parent = associatedIndicatorContainer.get_parent();
                 if (parent !== null) {
                     parent.remove_child(associatedIndicatorContainer);

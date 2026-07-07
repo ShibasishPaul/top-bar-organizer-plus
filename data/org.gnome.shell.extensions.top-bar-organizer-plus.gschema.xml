@@ -61,5 +61,16 @@
                 the cost of the residual reparent-crash risk tray icons carry.
             </description>
         </key>
+        <key name="appindicator-order-exceptions" type="as">
+            <description>
+                Application ids (as derived by handleAppIndicatorItem, e.g.
+                "Nextcloud") excluded from reordering even when
+                appindicator-order-mode is "full". Their identity is still
+                tracked and they still appear in family-order-appindicator,
+                but no reparent is ever attempted for them; they stay wherever
+                they currently are.
+            </description>
+            <default>[]</default>
+        </key>
     </schema>
 </schemalist>
