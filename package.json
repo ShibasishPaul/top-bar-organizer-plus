@@ -1,5 +1,5 @@
 {
-  "name": "top-bar-organizer",
+  "name": "top-bar-organizer-plus",
   "version": "1.0.0",
   "description": "A Gnome Shell Extension for organizing your Gnome Shell top bar.",
   "type": "module",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@gitlab.gnome.org:june/top-bar-organizer.git"
+    "url": "https://github.com/ShibasishPaul/top-bar-organizer-plus"
   },
   "author": "June",
   "license": "GPL-3.0-or-later",
