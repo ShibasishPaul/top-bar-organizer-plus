@@ -2,13 +2,18 @@
 
 import Gtk from "gi://Gtk";
 import Gdk from "gi://Gdk";
+import type Adw from "gi://Adw";
 
 import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
 import PrefsPage from "./prefsModules/PrefsPage.js";
 
 export default class TopBarOrganizerPreferences extends ExtensionPreferences {
-    getPreferencesWidget() {
+    // `fillPreferencesWindow` (rather than `getPreferencesWidget`) is used so
+    // more pages can be added to the window as sidebar entries. This is the
+    // shared base other branches add their own page onto; this commit still
+    // only adds the existing "Item Order" page.
+    async fillPreferencesWindow(window: Adw.PreferencesWindow): Promise<void> {
         const provider = new Gtk.CssProvider();
         provider.load_from_path(this.metadata.dir.get_path() + "/css/prefs.css");
         const defaultGdkDisplay = Gdk.Display.get_default();
@@ -18,15 +23,13 @@ export default class TopBarOrganizerPreferences extends ExtensionPreferences {
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         );
 
-        const prefsPage = new PrefsPage();
-
-        prefsPage.connect("destroy", () => {
+        window.connect("destroy", () => {
             Gtk.StyleContext.remove_provider_for_display(
                 (defaultGdkDisplay as Gdk.Display),
                 provider
             );
         });
 
-        return prefsPage;
+        window.add(new PrefsPage());
     }
 }
