@@ -80,6 +80,28 @@ export const FAMILIES: Family[] = [
         formatMemberTitle: (role) => `Window ${role.replace("taskButton", "")}`,
         groupDescription: "Order Tasks in Panel's window buttons within their group. Entries for closed windows are pruned automatically.",
     },
+    {
+        // Deliberately no `creatorExtensionUuid`/`rolePrefixFallback`:
+        // AppIndicator/KStatusNotifierItem roles are dispatched to
+        // `#handleFullModeAppIndicatorItem` before the generic per-role
+        // family lookup ever runs (see `BoxOrderManager#saveNewTopBarItems`),
+        // so this family is never matched that way.
+        // `pruneStaleMembers` must stay `false`: unlike other families,
+        // this family's persisted member order holds per-application
+        // settings identifiers, not roles — the generic prune loop compares
+        // persisted members against currently-present *roles*, which would
+        // never match and would wipe every entry on the very next pass.
+        id: "appindicator",
+        displayName: "AppIndicator",
+        pruneStaleMembers: false,
+        formatMemberTitle: (memberSettingsId: string) => {
+            const application = memberSettingsId
+                .replace(/^appindicator-kstatusnotifieritem-/, "")
+                .replace(/^legacy-/, "");
+            return application;
+        },
+        groupDescription: "Order AppIndicator/KStatusNotifierItem (tray) items within their group. Only takes effect when appindicator-order-mode is \"full\".",
+    },
 ];
 
 /**

@@ -266,6 +266,41 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
+     * Handles an AppIndicator/KStatusNotifierItem item for "full" ordering
+     * mode: derives its (per-application) settings identifier via
+     * `handleAppIndicatorItem`, records that identifier as a member of the
+     * "appindicator" family's persisted order (if not already present), and
+     * returns that family's group slot id, shared by all tray icons in
+     * "full" mode.
+     *
+     * Deliberately not routed through `#handleFamilyItem`: that method's
+     * persisted member order holds roles 1:1 (one member = one live role),
+     * while AppIndicator's identity granularity is per-application — a
+     * churning set of roles can map to one application id over its
+     * lifetime (see `handleAppIndicatorItem`). Reuses the "appindicator"
+     * family's naming helpers (`familyOrderKey`/`familyGroupSettingsId`)
+     * for consistency, not its per-role membership logic.
+     * @param {St.Bin} indicatorContainer - The container of the indicator of
+     * the AppIndicator/KStatusNotifierItem item.
+     * @param {string} role - The role of the AppIndicator/KStatusNotifierItem
+     * item.
+     * @returns {string} The settings identifier to use, i.e. the
+     * "appindicator" family's group slot id.
+     */
+    #handleFullModeAppIndicatorItem(indicatorContainer: St.Bin, role: string): string {
+        const itemSettingsId = this.handleAppIndicatorItem(indicatorContainer, role);
+
+        const key = familyOrderKey("appindicator");
+        const familyOrder = this.#getStrv(key);
+        if (!familyOrder.includes(itemSettingsId)) {
+            familyOrder.push(itemSettingsId);
+            this.#saveStrv(key, familyOrder);
+        }
+
+        return familyGroupSettingsId("appindicator");
+    }
+
+    /**
      * Handles a family item by storing its role in that family's persisted
      * member order (if not already present) and returning the family's
      * settings identifier.
@@ -341,8 +376,15 @@ export default class BoxOrderManager extends GObject.Object {
                 continue;
             }
 
-            // The family group is expanded to its persisted member roles.
-            const roles = this.#getStrv(familyOrderKey(family.id));
+            // The family group is expanded to its persisted member roles —
+            // except "appindicator", whose persisted member order holds
+            // per-application settings identifiers rather than roles
+            // directly (see `#handleFullModeAppIndicatorItem`), so its
+            // members are expanded to their currently-known roles instead.
+            const roles = family.id === "appindicator"
+                ? this.#getStrv(familyOrderKey(family.id))
+                    .flatMap(memberSettingsId => this.#appIndicatorItemSettingsIdToRolesMap.get(memberSettingsId) ?? [])
+                : this.#getStrv(familyOrderKey(family.id));
 
             // Create a new resolved box order item for each role and add it to
             // the resolved box order.
@@ -492,22 +534,29 @@ export default class BoxOrderManager extends GObject.Object {
                 if (role.startsWith("appindicator-")) {
                     // Dispatch on the configured AppIndicator/KStatusNotifierItem
                     // (tray) ordering mode.
-                    switch (this.#getAppIndicatorOrderMode()) {
-                        case "safe":
-                            // TODO: one-shot placement of newly created tray
-                            // icons, without ever reparenting them again.
-                        case "full":
-                            // TODO: real persisted tray icon ordering, reusing
-                            // handleAppIndicatorItem for identity.
-                        case "off":
-                        default:
-                            // Tray items are never tracked, saved or ordered.
-                            // Their containers get destroyed and recreated on
-                            // the application side, and reparenting a disposed
-                            // container (which the ordering pass does) crashes
-                            // gnome-shell. Leave tray icons wherever the
-                            // AppIndicator extension places them.
+                    if (this.#getAppIndicatorOrderMode() === "full") {
+                        try {
+                            itemSettingsId = this.#handleFullModeAppIndicatorItem(indicatorContainer, role);
+                        } catch (e) {
+                            if (!(e instanceof Error) || e.message !== "Application can't be determined.") {
+                                throw e;
+                            }
+                            // The "appIndicatorReady" signal will trigger a
+                            // retry for this item once its application is
+                            // determined.
                             continue;
+                        }
+                    } else {
+                        // "off": tray items are never tracked, saved or
+                        // ordered here. Their containers get destroyed and
+                        // recreated on the application side, and reparenting
+                        // a disposed container (which the ordering pass does)
+                        // crashes gnome-shell. Leave tray icons wherever the
+                        // AppIndicator extension places them.
+                        // "safe": handled entirely by a separate one-shot
+                        // mechanism in extension.ts's panel-box override,
+                        // which never touches the box-order settings.
+                        continue;
                     }
                 } else {
                     // A role already tracked as a standalone top-level

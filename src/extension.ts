@@ -72,6 +72,12 @@ export default class TopBarOrganizerExtension extends Extension {
         // Overwrite the `Panel._addToPanelBox` method with one handling new
         // items.
         this.#overwritePanelAddToPanelBox();
+        // Handle AppIndicators getting ready (relevant to "full" mode), to
+        // handle new AppIndicator items once their application can be
+        // determined.
+        this._boxOrderManager.connect("appIndicatorReady", () => {
+            this.#handleNewItemsAndOrderTopBar();
+        });
 
         // Handle changes of settings.
         this._settingsHandlerIds = [];

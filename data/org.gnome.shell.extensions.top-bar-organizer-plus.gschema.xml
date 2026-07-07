@@ -37,6 +37,14 @@
             <description>Top bar items to (forcefully) show.</description>
             <default>[]</default>
         </key>
+        <key name="family-order-appindicator" type="as">
+            <description>
+                Order of AppIndicator/KStatusNotifierItem (tray) items,
+                identified by derived application id, when
+                appindicator-order-mode is "full".
+            </description>
+            <default>[]</default>
+        </key>
         <key name="appindicator-order-mode" type="s">
             <choices>
                 <choice value='off'/>
