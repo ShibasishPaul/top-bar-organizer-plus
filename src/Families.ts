@@ -66,6 +66,20 @@ export const FAMILIES: Family[] = [
         formatMemberTitle: (role) => role.replace("/org/gnome/Shell/Extensions/GSConnect/Device/", ""),
         groupDescription: "Order GSConnect's paired devices within their group. Unlike the Item Order page, this list has no adjacent box to migrate into — moving a device only reorders it within this group.",
     },
+    {
+        // https://gitlab.com/fthx/tasks-in-panel
+        // Roles are `taskButton${windowId}` — a new, never-repeating value
+        // every time a window opens, so a member that stops being present
+        // anywhere is gone for good; pruning is what keeps this family's
+        // persisted order from growing without bound.
+        id: "tasks-in-panel",
+        displayName: "Tasks in Panel",
+        creatorExtensionUuid: "tasks-in-panel@fthx",
+        rolePrefixFallback: "taskButton",
+        pruneStaleMembers: true,
+        formatMemberTitle: (role) => `Window ${role.replace("taskButton", "")}`,
+        groupDescription: "Order Tasks in Panel's window buttons within their group. Entries for closed windows are pruned automatically.",
+    },
 ];
 
 /**
