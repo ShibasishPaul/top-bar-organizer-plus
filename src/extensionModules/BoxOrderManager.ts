@@ -179,6 +179,15 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
+     * Gets the configured AppIndicator/KStatusNotifierItem (tray) ordering
+     * mode: "off", "safe" or "full".
+     * @returns {string} The configured mode.
+     */
+    #getAppIndicatorOrderMode(): string {
+        return this.#settings.get_string("appindicator-order-mode");
+    }
+
+    /**
      * Handles an AppIndicator/KStatusNotifierItem item by deriving a settings
      * identifier and then associating the role of the given item to the items
      * settings identifier.
@@ -481,13 +490,25 @@ export default class BoxOrderManager extends GObject.Object {
                 // Then get a settings identifier for the item.
                 let itemSettingsId;
                 if (role.startsWith("appindicator-")) {
-                    // AppIndicator/KStatusNotifierItem (tray) items are
-                    // intentionally skipped: they are never tracked, saved or
-                    // ordered. Their containers get destroyed and recreated on
-                    // the application side, and reparenting a disposed container
-                    // (which the ordering pass does) crashes gnome-shell. Leave
-                    // tray icons wherever the AppIndicator extension places them.
-                    continue;
+                    // Dispatch on the configured AppIndicator/KStatusNotifierItem
+                    // (tray) ordering mode.
+                    switch (this.#getAppIndicatorOrderMode()) {
+                        case "safe":
+                            // TODO: one-shot placement of newly created tray
+                            // icons, without ever reparenting them again.
+                        case "full":
+                            // TODO: real persisted tray icon ordering, reusing
+                            // handleAppIndicatorItem for identity.
+                        case "off":
+                        default:
+                            // Tray items are never tracked, saved or ordered.
+                            // Their containers get destroyed and recreated on
+                            // the application side, and reparenting a disposed
+                            // container (which the ordering pass does) crashes
+                            // gnome-shell. Leave tray icons wherever the
+                            // AppIndicator extension places them.
+                            continue;
+                    }
                 } else {
                     // A role already tracked as a standalone top-level
                     // entry must not get reclassified into a family.

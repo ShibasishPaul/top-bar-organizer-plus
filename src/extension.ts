@@ -79,6 +79,7 @@ export default class TopBarOrganizerExtension extends Extension {
         addSettingsChangeHandler("right-box-order");
         addSettingsChangeHandler("hide");
         addSettingsChangeHandler("show");
+        addSettingsChangeHandler("appindicator-order-mode");
         // A family's member order lives in its own `family-order-${id}` key,
         // separate from the box-order keys above — reordering members within
         // a family (e.g. on the Groups page) only ever touches this key, so

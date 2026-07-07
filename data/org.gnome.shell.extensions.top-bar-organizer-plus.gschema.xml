@@ -37,5 +37,21 @@
             <description>Top bar items to (forcefully) show.</description>
             <default>[]</default>
         </key>
+        <key name="appindicator-order-mode" type="s">
+            <choices>
+                <choice value='off'/>
+                <choice value='safe'/>
+                <choice value='full'/>
+            </choices>
+            <default>'safe'</default>
+            <description>
+                Whether and how to order AppIndicator/KStatusNotifierItem
+                (tray) items. "off" never touches them. "safe" places a newly
+                created tray icon adjacent to the last-known tray icon once,
+                without ever reparenting it again. "full" keeps a persisted
+                custom order for tray icons, same as other top bar items, at
+                the cost of the residual reparent-crash risk tray icons carry.
+            </description>
+        </key>
     </schema>
 </schemalist>
