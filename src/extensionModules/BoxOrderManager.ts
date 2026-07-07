@@ -67,30 +67,50 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
+     * Gets a string array setting's value. Key-agnostic so it can be reused
+     * for both `${box}-box-order` keys and `family-order-${id}` keys.
+     * @param {string} key - The settings key to read.
+     * @returns {string[]} - The setting's current value.
+     */
+    #getStrv(key: string): string[] {
+        return this.#settings.get_strv(key);
+    }
+
+    /**
+     * Saves a string array setting's value, making sure to only write if the
+     * value actually changed, to avoid loops when listening on settings
+     * changes. Key-agnostic, see `#getStrv`.
+     * @param {string} key - The settings key to write.
+     * @param {string[]} value - The value to save.
+     */
+    #saveStrv(key: string, value: string[]): void {
+        const currentValue = this.#getStrv(key);
+
+        // Only save the given value to settings, if it is different, to
+        // avoid loops when listening on settings changes.
+        if (JSON.stringify(value) !== JSON.stringify(currentValue)) {
+            this.#settings.set_strv(key, value);
+        }
+    }
+
+    /**
      * Gets a box order for the given top bar box from settings.
      * @param {Box} box - The top bar box for which to get the box order.
      * @returns {string[]} - The box order consisting of an array of item
      * settings identifiers.
      */
     #getBoxOrder(box: Box): string[] {
-        return this.#settings.get_strv(`${box}-box-order`);
+        return this.#getStrv(`${box}-box-order`);
     }
 
     /**
-     * Save the given box order to settings, making sure to only save a changed
-     * box order, to avoid loops when listening on settings changes.
+     * Save the given box order to settings.
      * @param {Box} box - The top bar box for which to save the box order.
      * @param {string[]} boxOrder - The box order to save. Must be an array of
      * item settings identifiers.
      */
     #saveBoxOrder(box: Box, boxOrder: string[]): void {
-        const currentBoxOrder = this.#getBoxOrder(box);
-
-        // Only save the given box order to settings, if it is different, to
-        // avoid loops when listening on settings changes.
-        if (JSON.stringify(boxOrder) !== JSON.stringify(currentBoxOrder)) {
-            this.#settings.set_strv(`${box}-box-order`, boxOrder);
-        }
+        this.#saveStrv(`${box}-box-order`, boxOrder);
     }
 
     /**
