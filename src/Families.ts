@@ -52,6 +52,20 @@ export const FAMILIES: Family[] = [
         pruneStaleMembers: false,
         groupDescription: "Order Task Up UltraLite's items within their group.",
     },
+    {
+        // https://github.com/GSConnect/gnome-shell-extension-gsconnect
+        // Roles are the paired device's D-Bus object path — stable across
+        // restarts and reconnects for as long as the device stays paired, so
+        // there's no benefit to pruning a device just because it's
+        // temporarily offline.
+        id: "gsconnect",
+        displayName: "GSConnect",
+        creatorExtensionUuid: "gsconnect@andyholmes.github.io",
+        rolePrefixFallback: "/org/gnome/Shell/Extensions/GSConnect/Device/",
+        pruneStaleMembers: false,
+        formatMemberTitle: (role) => role.replace("/org/gnome/Shell/Extensions/GSConnect/Device/", ""),
+        groupDescription: "Order GSConnect's paired devices within their group. Unlike the Item Order page, this list has no adjacent box to migrate into — moving a device only reorders it within this group.",
+    },
 ];
 
 /**
