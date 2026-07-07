@@ -91,6 +91,9 @@ export default class BoxOrderManager extends GObject.Object {
      * then also makes sure that once the app indicators "ready" signal emits,
      * this classes "appIndicatorReady" signal emits as well, such that it and
      * other methods can be called again to properly handle the item.
+     * Legacy X11 tray icons handled by the AppIndicator extension don't expose
+     * an `_indicator` object; for those, the application name is derived from
+     * the role's `appindicator-legacy:` prefix instead.
      * @param {St.Bin} indicatorContainer - The container of the indicator of the
      * AppIndicator/KStatusNotifierItem item.
      * @param {string} role - The role of the AppIndicator/KStatusNotifierItem
@@ -102,16 +105,31 @@ export default class BoxOrderManager extends GObject.Object {
         // AppIndicator/KStatusNotifierItem extension, we loose a bunch of type
         // safety here.
         // https://github.com/ubuntu/gnome-shell-extension-appindicator
-        const appIndicator = (indicatorContainer.get_child() as any)._indicator;
-        let application = appIndicator.id;
+        // The AppIndicator and KStatusNotifierItem Support extension places
+        // `_indicator` directly on the container. The Ubuntu AppIndicator
+        // extension places it on the child instead.
+        const appIndicator = (indicatorContainer as any)._indicator ?? (indicatorContainer.get_child() as any)?._indicator;
 
-        if (!application && this.#appIndicatorReadyHandlerIdMap) {
-            const handlerId = appIndicator.connect("ready", () => {
-                this.emit("appIndicatorReady");
-                appIndicator.disconnect(handlerId);
-                this.#appIndicatorReadyHandlerIdMap.delete(handlerId);
-            });
-            this.#appIndicatorReadyHandlerIdMap.set(handlerId, appIndicator);
+        let application: string | undefined;
+        if (appIndicator) {
+            application = appIndicator.id;
+        } else if (role.startsWith("appindicator-legacy:")) {
+            // Legacy X11 tray icons (e.g. Steam, Discord) handled by the
+            // AppIndicator extension don't expose an `_indicator` object at
+            // all. Derive an application name from the role instead.
+            const parts = role.split(":");
+            application = "legacy-" + (parts.length >= 2 ? parts[1] : "unknown");
+        }
+
+        if (!application) {
+            if (appIndicator && this.#appIndicatorReadyHandlerIdMap) {
+                const handlerId = appIndicator.connect("ready", () => {
+                    this.emit("appIndicatorReady");
+                    appIndicator.disconnect(handlerId);
+                    this.#appIndicatorReadyHandlerIdMap.delete(handlerId);
+                });
+                this.#appIndicatorReadyHandlerIdMap.set(handlerId, appIndicator);
+            }
             throw new Error("Application can't be determined.");
         }
 
