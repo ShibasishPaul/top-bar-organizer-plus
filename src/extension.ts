@@ -16,6 +16,37 @@ export interface CustomPanel extends Panel.Panel {
     _rightBox: St.BoxLayout;
 }
 
+/**
+ * Finds the uuid of the extension whose code is calling into the current
+ * call stack, if any, by looking for the first stack frame under an
+ * `extensions/<uuid>/` path other than `ownUuid`.
+ * Used since some extensions' role names are not a stable way to recognize
+ * which "family" an item belongs to (see `BoxOrderManager`'s `Family`
+ * mechanism) — e.g. tasks-in-panel@fthx names each item `taskButton${windowId}`,
+ * a new value every time a window opens. Which extension's code added the
+ * item is stable regardless of what it names that item.
+ * @param {string | undefined} stack - A stack trace, as produced by `new Error().stack`.
+ * @param {string} ownUuid - This extension's own uuid, so its own frames
+ * (e.g. the override calling this) are skipped rather than misidentified.
+ * @returns {string | null} The first other extension's uuid found in the
+ * stack, or `null` if none could be determined (e.g. a core GNOME Shell
+ * component added the item, or the stack format didn't match).
+ */
+function extractCreatorExtensionUuid(stack: string | undefined, ownUuid: string): string | null {
+    if (!stack) {
+        return null;
+    }
+
+    for (const line of stack.split("\n")) {
+        const match = line.match(/\/extensions\/([^/]+)\//);
+        if (match && match[1] !== ownUuid) {
+            return match[1];
+        }
+    }
+
+    return null;
+}
+
 export default class TopBarOrganizerExtension extends Extension {
     _settings!: Gio.Settings;
     _boxOrderManager!: BoxOrderManager;
@@ -85,6 +116,14 @@ export default class TopBarOrganizerExtension extends Extension {
         const handleNewItemsAndOrderTopBar = () => {
             this.#handleNewItemsAndOrderTopBar();
         };
+        const recordItemCreator = (role: string) => {
+            // Captured here, since this is called synchronously from within
+            // the override below, which is itself called synchronously by
+            // whichever extension is adding this role — the creator's stack
+            // frame is present up the call chain at this exact point.
+            const creatorUuid = extractCreatorExtensionUuid(new Error().stack, this.uuid);
+            this._boxOrderManager.recordItemCreator(role, creatorUuid);
+        };
 
         // Overwrite `Panel._addToPanelBox`.
         Panel.Panel.prototype._addToPanelBox = function(role, indicator, position, box) {
@@ -92,6 +131,7 @@ export default class TopBarOrganizerExtension extends Extension {
             // and handle new items afterwards.
             // @ts-ignore
             this._originalAddToPanelBox(role, indicator, position, box);
+            recordItemCreator(role);
             handleNewItemsAndOrderTopBar();
         };
     }

@@ -40,14 +40,30 @@ export default class BoxOrderManager extends GObject.Object {
 
     #taskUpUltraLiteItemRoles: string[];
     #settings: Gio.Settings;
+    // Not persisted: cheaply re-derived every session as each role gets
+    // (re-)added, same as `#taskUpUltraLiteItemRoles` above already was.
+    #itemCreatorUuids: Map<string, string | null>;
 
     constructor(params = {}, settings: Gio.Settings) {
         // @ts-ignore Params should be passed, see: https://gjs.guide/guides/gobject/subclassing.html#subclassing-gobject
         super(params);
 
         this.#taskUpUltraLiteItemRoles = [];
+        this.#itemCreatorUuids = new Map();
 
         this.#settings = settings;
+    }
+
+    /**
+     * Records which extension (if any could be determined) created the item
+     * associated with the given role. Used for family matching — see
+     * `extractCreatorExtensionUuid` in `extension.ts` for how this is derived.
+     * @param {string} role - The role of the item.
+     * @param {string | null} creatorUuid - The creating extension's uuid, or
+     * `null` if it couldn't be determined (e.g. added by GNOME Shell itself).
+     */
+    recordItemCreator(role: string, creatorUuid: string | null): void {
+        this.#itemCreatorUuids.set(role, creatorUuid);
     }
 
     /**
