@@ -101,6 +101,7 @@ export default class TopBarOrganizerExtension extends Extension {
         for (const handlerId of this._settingsHandlerIds) {
             this._settings.disconnect(handlerId);
         }
+        this._boxOrderManager.disconnectSignals();
 
         // @ts-ignore
         this._settings = null;

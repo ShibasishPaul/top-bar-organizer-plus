@@ -24,22 +24,31 @@ interface ResolvedBoxOrderItem {
 
 /**
  * This class provides an interfaces to the box orders stored in settings.
- * It takes care of handling Task Up UltraLite items and resolving from the
- * internal item settings identifiers to roles.
+ * It takes care of handling AppIndicator and Task Up UltraLite items and
+ * resolving from the internal item settings identifiers to roles.
  * In the end this results in convenient functions, which are directly useful in
  * other extension code.
  *
- * NOTE: AppIndicator/KStatusNotifierItem (tray) items are deliberately NOT
- * tracked, resolved or ordered by this fork. Their containers are destroyed and
- * recreated on the application side (readiness transitions, reconnects, legacy
- * XEmbed socket rebuilds), and reparenting such a disposed container crashes
- * gnome-shell (SIGSEGV in mutter). See `saveNewTopBarItems`.
+ * NOTE: reparenting a disposed AppIndicator/KStatusNotifierItem (tray)
+ * container crashes gnome-shell (SIGSEGV in mutter) — their containers are
+ * destroyed and recreated on the application side (readiness transitions,
+ * reconnects, legacy XEmbed socket rebuilds). `handleAppIndicatorItem` below
+ * only derives identity; nothing yet consumes it to actually reorder tray
+ * containers (see `saveNewTopBarItems`), so this is safe on its own.
  */
 export default class BoxOrderManager extends GObject.Object {
     static {
-        GObject.registerClass(this);
+        GObject.registerClass({
+            Signals: {
+                "appIndicatorReady": {},
+            },
+        }, this);
     }
 
+    // Can't have type guarantees here, since this is working with types from
+    // the KStatusNotifier/AppIndicator extension.
+    #appIndicatorReadyHandlerIdMap: Map<any, any>;
+    #appIndicatorItemSettingsIdToRolesMap: Map<string, string[]>;
     #settings: Gio.Settings;
     // Persisted in the `item-creators` setting (as `role -> uuid`, with `""`
     // standing in for a confirmed-null creator, since GSettings' `a{ss}`
@@ -52,6 +61,9 @@ export default class BoxOrderManager extends GObject.Object {
     constructor(params = {}, settings: Gio.Settings) {
         // @ts-ignore Params should be passed, see: https://gjs.guide/guides/gobject/subclassing.html#subclassing-gobject
         super(params);
+
+        this.#appIndicatorReadyHandlerIdMap = new Map();
+        this.#appIndicatorItemSettingsIdToRolesMap = new Map();
 
         this.#settings = settings;
 
@@ -167,6 +179,84 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
+     * Handles an AppIndicator/KStatusNotifierItem item by deriving a settings
+     * identifier and then associating the role of the given item to the items
+     * settings identifier.
+     * It then returns the derived settings identifier.
+     * In the case, where the settings identifier can't be derived, because the
+     * application can't be determined, this method throws an error. However it
+     * then also makes sure that once the app indicators "ready" signal emits,
+     * this classes "appIndicatorReady" signal emits as well, such that it and
+     * other methods can be called again to properly handle the item.
+     * Legacy X11 tray icons handled by the AppIndicator extension don't expose
+     * an `_indicator` object; for those, the application name is derived from
+     * the role's `appindicator-legacy:` prefix instead.
+     * @param {St.Bin} indicatorContainer - The container of the indicator of the
+     * AppIndicator/KStatusNotifierItem item.
+     * @param {string} role - The role of the AppIndicator/KStatusNotifierItem
+     * item.
+     * @returns {string} The derived items settings identifier.
+     */
+    handleAppIndicatorItem(indicatorContainer: St.Bin, role: string): string {
+        // Since this is working with types from the
+        // AppIndicator/KStatusNotifierItem extension, we loose a bunch of type
+        // safety here.
+        // https://github.com/ubuntu/gnome-shell-extension-appindicator
+        // The AppIndicator and KStatusNotifierItem Support extension places
+        // `_indicator` directly on the container. The Ubuntu AppIndicator
+        // extension places it on the child instead.
+        const appIndicator = (indicatorContainer as any)._indicator ?? (indicatorContainer.get_child() as any)?._indicator;
+
+        let application: string | undefined;
+        if (appIndicator) {
+            application = appIndicator.id;
+        } else if (role.startsWith("appindicator-legacy:")) {
+            // Legacy X11 tray icons (e.g. Steam, Discord) handled by the
+            // AppIndicator extension don't expose an `_indicator` object at
+            // all. Derive an application name from the role instead.
+            const parts = role.split(":");
+            application = "legacy-" + (parts.length >= 2 ? parts[1] : "unknown");
+        }
+
+        if (!application) {
+            if (appIndicator && this.#appIndicatorReadyHandlerIdMap) {
+                const handlerId = appIndicator.connect("ready", () => {
+                    this.emit("appIndicatorReady");
+                    appIndicator.disconnect(handlerId);
+                    this.#appIndicatorReadyHandlerIdMap.delete(handlerId);
+                });
+                this.#appIndicatorReadyHandlerIdMap.set(handlerId, appIndicator);
+            }
+            throw new Error("Application can't be determined.");
+        }
+
+        // Since the Dropbox client appends its PID to the id, drop the PID and
+        // the hyphen before it.
+        if (application.startsWith("dropbox-client-")) {
+            application = "dropbox-client";
+        }
+
+        // Derive the items settings identifier from the application name.
+        const itemSettingsId = `appindicator-kstatusnotifieritem-${application}`;
+
+        // Associate the role with the items settings identifier.
+        let roles = this.#appIndicatorItemSettingsIdToRolesMap.get(itemSettingsId);
+        if (roles) {
+            // If the settings identifier already has an array of associated
+            // roles, just add the role to it, if needed.
+            if (!roles.includes(role)) {
+                roles.push(role);
+            }
+        } else {
+            // Otherwise create a new array.
+            this.#appIndicatorItemSettingsIdToRolesMap.set(itemSettingsId, [role]);
+        }
+
+        // Return the item settings identifier.
+        return itemSettingsId;
+    }
+
+    /**
      * Handles a family item by storing its role in that family's persisted
      * member order (if not already present) and returning the family's
      * settings identifier.
@@ -255,6 +345,21 @@ export default class BoxOrderManager extends GObject.Object {
         }
 
         return resolvedBoxOrder;
+    }
+
+    /**
+     * Disconnects all signals (and disables future signal connection).
+     * This is typically used before nulling an instance of this class to make
+     * sure all signals are disconnected.
+     */
+    disconnectSignals(): void {
+        for (const [handlerId, appIndicator] of this.#appIndicatorReadyHandlerIdMap) {
+            if (handlerId && appIndicator?.signalHandlerIsConnected(handlerId)) {
+                appIndicator.disconnect(handlerId);
+            }
+        }
+        // @ts-ignore
+        this.#appIndicatorReadyHandlerIdMap = null;
     }
 
     /**
