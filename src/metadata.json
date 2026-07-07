@@ -1,9 +1,9 @@
 {
-    "uuid": "top-bar-organizer@julian.gse.jsts.xyz",
-    "name": "Top Bar Organizer",
+    "uuid": "top-bar-organizer-plus@shibasishpaul.github.com",
+    "name": "Top Bar Organizer Plus",
     "description": "Organize the items of the top (menu)bar.",
-    "version": 16,
+    "version": 16.1,
     "shell-version": [ "45", "46", "47", "48", "49", "50" ],
     "settings-schema": "org.gnome.shell.extensions.top-bar-organizer",
-    "url": "https://gitlab.gnome.org/june/top-bar-organizer"
+    "url": "https://github.com/ShibasishPaul/top-bar-organizer-plus"
 }
