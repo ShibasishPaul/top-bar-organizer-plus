@@ -10,11 +10,10 @@
             </object>
         </child>
         <child type="suffix">
-            <object class="GtkMenuButton">
+            <object class="GtkMenuButton" id="options-menu-button">
                 <property name="valign">center</property>
                 <property name="icon-name">view-more-symbolic</property>
                 <property name="tooltip-text">Options</property>
-                <property name="menu-model">optionsMenuModel</property>
                 <style>
                     <class name="flat"/>
                 </style>
@@ -35,28 +34,4 @@
             </object>
         </child>
     </template>
-    <menu id="optionsMenuModel">
-        <section>
-            <item>
-                <attribute name="label">Move Up</attribute>
-                <attribute name="action">row.move-up</attribute>
-            </item>
-            <item>
-                <attribute name="label">Move Down</attribute>
-                <attribute name="action">row.move-down</attribute>
-            </item>
-        </section>
-        <section>
-            <item>
-                <attribute name="label">Options</attribute>
-                <attribute name="action">row.options</attribute>
-            </item>
-        </section>
-        <section>
-            <item>
-                <attribute name="label">Forget</attribute>
-                <attribute name="action">row.forget</attribute>
-            </item>
-        </section>
-    </menu>
 </interface>

@@ -9,6 +9,7 @@ import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/
 
 import PrefsBoxOrderItemRow from "./PrefsBoxOrderItemRow.js";
 import PrefsBoxOrderListEmptyPlaceholder from "./PrefsBoxOrderListEmptyPlaceholder.js";
+import type { Family } from "../Families.js";
 
 export default class PrefsBoxOrderListBox extends Gtk.ListBox {
     static {
@@ -23,6 +24,30 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
                     GObject.ParamFlags.READWRITE,
                     ""
                 ),
+                // Definite, explicitly-set replacement for deriving "is this
+                // list part of the left/center/right migration chain?" from
+                // a hardcoded list of box-order key strings — that
+                // derivation broke silently if a key name ever changed.
+                // Every PrefsBoxOrderListBox now states this directly.
+                IsChained: GObject.ParamSpec.boolean(
+                    "is-chained",
+                    "Is Chained",
+                    "Whether this list box is part of the left/center/right migration chain (move-up/down and drag-and-drop between adjacent boxes) rather than a standalone list (e.g. a family's member list).",
+                    GObject.ParamFlags.READWRITE,
+                    true
+                ),
+                // The Family this list box is bound to, for standalone
+                // family lists (null for chained left/center/right lists).
+                // Set directly rather than derived from `box-order`'s
+                // string value, so consumers (e.g. row title formatting,
+                // the "Move to Group"/"Remove from Group" row actions)
+                // never need to re-parse or guess it.
+                Family: GObject.ParamSpec.jsobject(
+                    "family",
+                    "Family",
+                    "The Family this list box is bound to, or null for a chained left/center/right list.",
+                    GObject.ParamFlags.READWRITE
+                ),
             },
             Signals: {
                 "row-move": {
@@ -33,8 +58,11 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
     }
 
     _boxOrder!: string;
+    _isChained: boolean = true;
+    _family: Family | null = null;
     #settings: Gio.Settings;
     #rowSignalHandlerIds = new Map<PrefsBoxOrderItemRow, number[]>();
+    #settingsChangedHandlerId?: number;
 
     /**
      * @param {Object} params
@@ -48,6 +76,12 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
         // Add a placeholder widget for the case, where no GtkListBoxRows are
         // present.
         this.set_placeholder(new PrefsBoxOrderListEmptyPlaceholder());
+
+        this.connect("destroy", () => {
+            if (this.#settingsChangedHandlerId !== undefined) {
+                this.#settings.disconnect(this.#settingsChangedHandlerId);
+            }
+        });
     }
 
     get boxOrder(): string {
@@ -57,17 +91,88 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
     set boxOrder(value: string) {
         this._boxOrder = value;
 
-        // Get the actual box order for the given box order name from settings.
-        const boxOrder = this.#settings.get_strv(this._boxOrder);
-        // Populate this GtkListBox with GtkListBoxRows for the items of the
-        // given configured box order.
-        for (const item of boxOrder) {
-            const row = new PrefsBoxOrderItemRow({}, item);
+        this.#rebuildFromSettings();
+
+        // Live-update: whenever this list's settings key changes — whether
+        // from a move/drag within this same list, or from an entirely
+        // different list box (e.g. a "Move to Group" row action on another
+        // page, or another PrefsBoxOrderListBox instance for the same key)
+        // — reconcile this list's rows with the new value. `#rebuildFromSettings`
+        // no-ops when the value already matches what's rendered, so this
+        // doesn't fight with this list's own writes.
+        if (this.#settingsChangedHandlerId !== undefined) {
+            this.#settings.disconnect(this.#settingsChangedHandlerId);
+        }
+        this.#settingsChangedHandlerId = this.#settings.connect(`changed::${this._boxOrder}`, () => {
+            this.#rebuildFromSettings();
+        });
+
+        this.notify("box-order");
+    }
+
+    get isChained(): boolean {
+        return this._isChained;
+    }
+
+    set isChained(value: boolean) {
+        this._isChained = value;
+        this.notify("is-chained");
+    }
+
+    get family(): Family | null {
+        return this._family;
+    }
+
+    set family(value: Family | null) {
+        this._family = value;
+        this.notify("family");
+    }
+
+    /**
+     * Collects the roles of this list box's current rows, in order.
+     */
+    #getCurrentRoles(): string[] {
+        let roles: string[] = [];
+        for (let potentialPrefsBoxOrderItemRow of this) {
+            if (!(potentialPrefsBoxOrderItemRow instanceof PrefsBoxOrderItemRow)) {
+                continue;
+            }
+            roles.push(potentialPrefsBoxOrderItemRow.item);
+        }
+        return roles;
+    }
+
+    /**
+     * Reconciles this list box's rows with the current settings value of
+     * `boxOrder`. A no-op if they already match (e.g. right after this
+     * list box's own write triggered the `changed` signal), so this is
+     * safe to call unconditionally on every `changed::${boxOrder}` signal
+     * regardless of who wrote it.
+     */
+    #rebuildFromSettings(): void {
+        const newRoles = this.#settings.get_strv(this._boxOrder);
+        const currentRoles = this.#getCurrentRoles();
+
+        if (JSON.stringify(newRoles) === JSON.stringify(currentRoles)) {
+            return;
+        }
+
+        const rowsToRemove: PrefsBoxOrderItemRow[] = [];
+        for (let potentialPrefsBoxOrderItemRow of this) {
+            if (potentialPrefsBoxOrderItemRow instanceof PrefsBoxOrderItemRow) {
+                rowsToRemove.push(potentialPrefsBoxOrderItemRow);
+            }
+        }
+        for (const row of rowsToRemove) {
+            this.removeRow(row);
+        }
+
+        for (const item of newRoles) {
+            const row = new PrefsBoxOrderItemRow({}, item, this._family);
             this.insertRow(row, -1);
         }
 
         this.determineRowMoveActionEnable();
-        this.notify("box-order");
     }
 
     /**
@@ -105,17 +210,7 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
      * `PrefsBoxOrderItemRows`) to settings.
      */
     saveBoxOrderToSettings(): void {
-        let currentBoxOrder: string[] = [];
-        for (let potentialPrefsBoxOrderItemRow of this) {
-            // Only process PrefsBoxOrderItemRows.
-            if (!(potentialPrefsBoxOrderItemRow instanceof PrefsBoxOrderItemRow)) {
-                continue;
-            }
-
-            const item = potentialPrefsBoxOrderItemRow.item;
-            currentBoxOrder.push(item);
-        }
-        this.#settings.set_strv(this.boxOrder, currentBoxOrder);
+        this.#settings.set_strv(this.boxOrder, this.#getCurrentRoles());
     }
 
     /**
@@ -123,6 +218,8 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
      * should be enabled or disabled.
      */
     determineRowMoveActionEnable(): void {
+        const isChained = this.isChained;
+
         for (let potentialPrefsBoxOrderItemRow of this) {
             // Only process PrefsBoxOrderItemRows.
             if (!(potentialPrefsBoxOrderItemRow instanceof PrefsBoxOrderItemRow)) {
@@ -131,18 +228,21 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
 
             const row = potentialPrefsBoxOrderItemRow;
 
-            // If the current row is the topmost row in the topmost list box,
-            // then disable the move-up action.
-            if (row.get_index() === 0 && this.boxOrder === "left-box-order") {
+            // If the current row is the topmost row in the topmost list box
+            // of the chain, then disable the move-up action. A standalone
+            // (non-chained) list has no chain to migrate into at all, so its
+            // topmost row disables move-up unconditionally.
+            if (row.get_index() === 0 && (!isChained || this.boxOrder === "left-box-order")) {
                 row.action_set_enabled("row.move-up", false);
             } else { // Else enable it.
                 row.action_set_enabled("row.move-up", true);
             }
 
-            // If the current row is the bottommost row in the bottommost list
-            // box, then disable the move-down action.
+            // Same idea for the bottommost row of the bottommost list box in
+            // the chain, or unconditionally for a standalone list.
             const rowNextSibling = row.get_next_sibling();
-            if ((rowNextSibling instanceof PrefsBoxOrderListEmptyPlaceholder || rowNextSibling === null) && this.boxOrder === "right-box-order") {
+            const isLastRow = rowNextSibling instanceof PrefsBoxOrderListEmptyPlaceholder || rowNextSibling === null;
+            if (isLastRow && (!isChained || this.boxOrder === "right-box-order")) {
                 row.action_set_enabled("row.move-down", false);
             } else { // Else enable it.
                 row.action_set_enabled("row.move-down", true);

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
     <template class="PrefsPage" parent="AdwPreferencesPage">
+        <property name="title">Item Order</property>
+        <property name="icon-name">view-list-symbolic</property>
         <child>
             <object class="AdwPreferencesGroup">
                 <property name="title">Item Order</property>
@@ -15,6 +17,7 @@
                 <child>
                     <object class="PrefsBoxOrderListBox" id="left-box-order-list-box">
                         <property name="box-order">left-box-order</property>
+                        <property name="is-chained">True</property>
                         <signal name="row-move" handler="onRowMove"/>
                     </object>
                 </child>
@@ -29,6 +32,7 @@
                 <child>
                     <object class="PrefsBoxOrderListBox" id="center-box-order-list-box">
                         <property name="box-order">center-box-order</property>
+                        <property name="is-chained">True</property>
                         <signal name="row-move" handler="onRowMove"/>
                     </object>
                 </child>
@@ -43,6 +47,7 @@
                 <child>
                     <object class="PrefsBoxOrderListBox" id="right-box-order-list-box">
                         <property name="box-order">right-box-order</property>
+                        <property name="is-chained">True</property>
                         <signal name="row-move" handler="onRowMove"/>
                     </object>
                 </child>

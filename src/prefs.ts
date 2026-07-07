@@ -7,12 +7,11 @@ import type Adw from "gi://Adw";
 import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
 import PrefsPage from "./prefsModules/PrefsPage.js";
+import PrefsGroupsPage from "./prefsModules/PrefsGroupsPage.js";
 
 export default class TopBarOrganizerPreferences extends ExtensionPreferences {
-    // `fillPreferencesWindow` (rather than `getPreferencesWidget`) is used so
-    // more pages can be added to the window as sidebar entries. This is the
-    // shared base other branches add their own page onto; this commit still
-    // only adds the existing "Item Order" page.
+    // `fillPreferencesWindow` (rather than `getPreferencesWidget`) lets more
+    // than one page be added to the window as sidebar entries.
     async fillPreferencesWindow(window: Adw.PreferencesWindow): Promise<void> {
         const provider = new Gtk.CssProvider();
         provider.load_from_path(this.metadata.dir.get_path() + "/css/prefs.css");
@@ -31,5 +30,6 @@ export default class TopBarOrganizerPreferences extends ExtensionPreferences {
         });
 
         window.add(new PrefsPage());
+        window.add(new PrefsGroupsPage());
     }
 }

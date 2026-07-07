@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="PrefsGroupsPage" parent="AdwPreferencesPage">
+        <property name="title">Groups</property>
+        <property name="icon-name">view-grid-symbolic</property>
+    </template>
+</interface>

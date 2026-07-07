@@ -30,6 +30,11 @@ export default class PrefsBoxOrderListEmptyPlaceholder extends Gtk.Box {
         const ownListBox = this.get_parent() as PrefsBoxOrderListBox;
         const valueListBox = value.get_parent() as PrefsBoxOrderListBox;
 
+        if (ownListBox !== valueListBox
+            && (!ownListBox.isChained || !valueListBox.isChained)) {
+            return false;
+        }
+
         // Remove the drop value from its list box.
         valueListBox.removeRow(value);
 

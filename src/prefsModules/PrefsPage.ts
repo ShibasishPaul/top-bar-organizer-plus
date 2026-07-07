@@ -41,6 +41,18 @@ export default class PrefsPage extends Adw.PreferencesPage {
         if (direction === "up") { // If the direction of the move is up.
             // Handle the case, where the row is the topmost row in the list box.
             if (rowPosition === 0) {
+                if (!listBox.isChained) {
+                    // A standalone (e.g. family) list has no chain to
+                    // migrate into. Clamp here instead of falling through to
+                    // "move within this list" below, which would wrap this
+                    // row to the end via insertRow(row, -1) — this row's
+                    // move-up action should already be disabled for this
+                    // exact case (see determineRowMoveActionEnable), but
+                    // don't rely on that alone.
+                    log("The row is already the topmost row in a standalone list box.");
+                    return;
+                }
+
                 switch (listBox.boxOrder) {
                     // If the row is also in the topmost list box, then do
                     // nothing and return.
@@ -82,6 +94,12 @@ export default class PrefsPage extends Adw.PreferencesPage {
             // Handle the case, where the row is the bottommost row in the list box.
             const rowNextSibling = row.get_next_sibling();
             if (rowNextSibling instanceof PrefsBoxOrderListEmptyPlaceholder || rowNextSibling === null) {
+                if (!listBox.isChained) {
+                    // See the equivalent guard for direction "up" above.
+                    log("The row is already the bottommost row in a standalone list box.");
+                    return;
+                }
+
                 switch (listBox.boxOrder) {
                     // If the row is also in the bottommost list box, then do
                     // nothing and return.
