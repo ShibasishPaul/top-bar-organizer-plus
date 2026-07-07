@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="PrefsAppIndicatorPage" parent="AdwPreferencesPage">
+        <property name="title">AppIndicator</property>
+        <property name="icon-name">utilities-tweak-tool-symbolic</property>
+        <child>
+            <object class="AdwPreferencesGroup">
+                <property name="title">Ordering</property>
+                <child>
+                    <object class="AdwComboRow" id="mode-row">
+                        <property name="title">Order Mode</property>
+                        <property name="subtitle">"Off" never touches tray icons. "Safe" places a newly created tray icon next to the last one once, without ever moving it again. "Full" keeps a persisted custom order for tray icons, same as other top bar items, at the cost of a small residual crash risk tray icons carry when reordered repeatedly.</property>
+                        <property name="model">
+                            <object class="GtkStringList">
+                                <items>
+                                    <item>Off</item>
+                                    <item>Safe</item>
+                                    <item>Full</item>
+                                </items>
+                            </object>
+                        </property>
+                        <signal name="notify::selected-item" handler="onModeRowSelectionChanged"/>
+                    </object>
+                </child>
+            </object>
+        </child>
+        <child>
+            <object class="AdwPreferencesGroup" id="exceptions-group">
+                <property name="title">Exceptions</property>
+                <property name="description">Applications to keep out of "Full" mode reordering. Their identity is still tracked, but they're never moved — they stay wherever they currently are.</property>
+                <child>
+                    <object class="AdwEntryRow" id="add-exception-entry-row">
+                        <property name="title">Application id, e.g. Nextcloud</property>
+                        <property name="show-apply-button">True</property>
+                        <signal name="apply" handler="onAddExceptionEntryApply"/>
+                        <signal name="entry-activated" handler="onAddExceptionEntryApply"/>
+                    </object>
+                </child>
+            </object>
+        </child>
+    </template>
+</interface>
