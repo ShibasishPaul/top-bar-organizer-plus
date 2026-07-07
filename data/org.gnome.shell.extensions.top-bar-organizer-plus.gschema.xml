@@ -13,6 +13,22 @@
             <description>Order of items in the right box of the top bar.</description>
             <default>[]</default>
         </key>
+        <key name="family-order-task-up-ultralite" type="as">
+            <description>Order of Task Up UltraLite items within their group slot.</description>
+            <default>[]</default>
+        </key>
+        <key name="family-order-gsconnect" type="as">
+            <description>Order of GSConnect device items within their group slot.</description>
+            <default>[]</default>
+        </key>
+        <key name="family-order-tasks-in-panel" type="as">
+            <description>Order of Tasks in Panel items within their group slot.</description>
+            <default>[]</default>
+        </key>
+        <key name="item-creators" type="a{ss}">
+            <description>Persisted map of item role to the uuid of the extension that created it (or an empty string if confirmed to have no creator extension). Makes first-write-wins creator identification durable across restarts instead of re-deriving it, and closes the race window, every session.</description>
+            <default>{}</default>
+        </key>
         <key name="hide" type="as">
             <description>Top bar items to (forcefully) hide.</description>
             <default>[]</default>

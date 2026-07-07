@@ -1,12 +1,14 @@
 "use strict";
 
 import GObject from "gi://GObject";
+import GLib from "gi://GLib";
 import St from "gi://St";
 import type Gio from "gi://Gio";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 import type { CustomPanel } from "../extension.js"
+import { FAMILIES, familyOrderKey, familyGroupSettingsId, findFamilyByGroupSettingsId, type Family } from "../Families.js";
 
 export type Box = "left" | "center" | "right";
 type Hide = "hide" | "show" | "default";
@@ -38,32 +40,62 @@ export default class BoxOrderManager extends GObject.Object {
         GObject.registerClass(this);
     }
 
-    #taskUpUltraLiteItemRoles: string[];
     #settings: Gio.Settings;
-    // Not persisted: cheaply re-derived every session as each role gets
-    // (re-)added, same as `#taskUpUltraLiteItemRoles` above already was.
+    // Persisted in the `item-creators` setting (as `role -> uuid`, with `""`
+    // standing in for a confirmed-null creator, since GSettings' `a{ss}`
+    // can't hold an actual null). Loaded once here and kept in sync on every
+    // write, so a role's creator only ever needs to be determined once
+    // across a role's entire lifetime, not just once per session — see
+    // `recordItemCreator`.
     #itemCreatorUuids: Map<string, string | null>;
 
     constructor(params = {}, settings: Gio.Settings) {
         // @ts-ignore Params should be passed, see: https://gjs.guide/guides/gobject/subclassing.html#subclassing-gobject
         super(params);
 
-        this.#taskUpUltraLiteItemRoles = [];
-        this.#itemCreatorUuids = new Map();
-
         this.#settings = settings;
+
+        const persistedCreators = this.#settings.get_value("item-creators").deep_unpack() as Record<string, string>;
+        this.#itemCreatorUuids = new Map(
+            Object.entries(persistedCreators).map(([role, uuid]) => [role, uuid === "" ? null : uuid])
+        );
     }
 
     /**
      * Records which extension (if any could be determined) created the item
      * associated with the given role. Used for family matching — see
      * `extractCreatorExtensionUuid` in `extension.ts` for how this is derived.
+     *
+     * First write wins: once a role's creator is known (this session or a
+     * past one, via the persisted `item-creators` setting), later calls are
+     * no-ops. This matters because a role's `_addToPanelBox` call can be
+     * re-triggered later by an extension other than its true creator (e.g.
+     * an extension removing and reinserting a core indicator to reposition
+     * it) — without first-write-wins, that later call would overwrite the
+     * correct creator with the wrong one.
      * @param {string} role - The role of the item.
      * @param {string | null} creatorUuid - The creating extension's uuid, or
      * `null` if it couldn't be determined (e.g. added by GNOME Shell itself).
      */
     recordItemCreator(role: string, creatorUuid: string | null): void {
+        if (this.#itemCreatorUuids.has(role)) {
+            return;
+        }
+
         this.#itemCreatorUuids.set(role, creatorUuid);
+        this.#persistItemCreators();
+    }
+
+    /**
+     * Writes the current in-memory creator map to the `item-creators`
+     * setting.
+     */
+    #persistItemCreators(): void {
+        const obj: Record<string, string> = {};
+        for (const [role, uuid] of this.#itemCreatorUuids) {
+            obj[role] = uuid ?? "";
+        }
+        this.#settings.set_value("item-creators", new GLib.Variant("a{ss}", obj));
     }
 
     /**
@@ -114,23 +146,56 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
-     * Handles a Task Up UltraLite item by storing its role and returning the
-     * Task Up UltraLite settings identifier.
-     * This is needed since the Task Up UltraLite extension creates a bunch of
-     * top bar items as part of its functionality, so we want to group them
-     * under one identifier in the settings.
-     * https://extensions.gnome.org/extension/7700/task-up-ultralite/
-     * @param {string} role - The role of the Task Up UltraLite item.
+     * Finds the family the given role belongs to, if any. See `Family` for
+     * how creator-uuid vs. role-prefix matching is chosen.
+     * @param {string} role - The role to find a family for.
+     * @returns {Family | undefined} The matching family, if any.
+     */
+    #findFamilyForRole(role: string): Family | undefined {
+        const creatorUuid = this.#itemCreatorUuids.get(role) ?? null;
+
+        return FAMILIES.find(family => {
+            if (creatorUuid !== null && family.creatorExtensionUuid !== undefined) {
+                // Both sides have a known creator uuid to compare — a
+                // confident answer either way, don't second-guess it with
+                // the weaker prefix heuristic below.
+                return creatorUuid === family.creatorExtensionUuid;
+            }
+
+            return family.rolePrefixFallback !== undefined && role.startsWith(family.rolePrefixFallback);
+        });
+    }
+
+    /**
+     * Handles a family item by storing its role in that family's persisted
+     * member order (if not already present) and returning the family's
+     * settings identifier.
+     * @param {Family} family - The family the item belongs to.
+     * @param {string} role - The role of the item.
      * @returns {string} The settings identifier to use.
      */
-    #handleTaskUpUltraLiteItem(role: string): string {
-        const roles = this.#taskUpUltraLiteItemRoles;
+    #handleFamilyItem(family: Family, role: string): string {
+        const key = familyOrderKey(family.id);
+        const roles = this.#getStrv(key);
 
         if (!roles.includes(role)) {
+            // Defense-in-depth: never absorb a role that already has its
+            // own top-level box-order entry (see the standalone guard in
+            // saveNewTopBarItems for why this can happen).
+            const boxOrders = [
+                this.#getBoxOrder("left"),
+                this.#getBoxOrder("center"),
+                this.#getBoxOrder("right"),
+            ];
+            if (boxOrders.some(bo => bo.includes(role))) {
+                return role;
+            }
+
             roles.push(role);
+            this.#saveStrv(key, roles);
         }
 
-        return "item-role-group-task-up-ultralite";
+        return familyGroupSettingsId(family.id);
     }
 
     /**
@@ -164,20 +229,21 @@ export default class BoxOrderManager extends GObject.Object {
                 resolvedBoxOrderItem.hide = "default";
             }
 
-            // If the item's settings identifier isn't the Task Up UltraLite
-            // item role group, then its identifier is the role and it can just
-            // be added to the resolved box order.
+            // If the item's settings identifier isn't a family group, then
+            // its identifier is the role and it can just be added to the
+            // resolved box order.
             // (Any leftover `appindicator-kstatusnotifieritem-*` identifiers
             // from older settings are treated the same way; they won't match a
             // current status area role and get dropped by getValidBoxOrder.)
-            if (itemSettingsId !== "item-role-group-task-up-ultralite") {
+            const family = findFamilyByGroupSettingsId(itemSettingsId);
+            if (!family) {
                 resolvedBoxOrderItem.role = resolvedBoxOrderItem.settingsId;
                 resolvedBoxOrder.push(resolvedBoxOrderItem);
                 continue;
             }
 
-            // The Task Up UltraLite item role group is expanded to its roles.
-            const roles: string[] = this.#taskUpUltraLiteItemRoles;
+            // The family group is expanded to its persisted member roles.
+            const roles = this.#getStrv(familyOrderKey(family.id));
 
             // Create a new resolved box order item for each role and add it to
             // the resolved box order.
@@ -262,6 +328,19 @@ export default class BoxOrderManager extends GObject.Object {
             indicatorContainerRoleMap.set(associatedIndicatorContainer, role);
         }
 
+        // Prune families whose members shouldn't be remembered once they're
+        // no longer present anywhere in the top bar (see `pruneStaleMembers`
+        // on `Family`), before any new items get added below.
+        const currentlyPresentRoles = new Set(indicatorContainerRoleMap.values());
+        for (const family of FAMILIES) {
+            if (!family.pruneStaleMembers) {
+                continue;
+            }
+            const key = familyOrderKey(family.id);
+            const prunedRoles = this.#getStrv(key).filter(role => currentlyPresentRoles.has(role));
+            this.#saveStrv(key, prunedRoles);
+        }
+
         // Get the indicator containers (of the items) currently present in the
         // GNOME Shell top bar boxes.
         // They should be St.Bins (see link), so ensure that using a filter.
@@ -285,6 +364,15 @@ export default class BoxOrderManager extends GObject.Object {
                     continue;
                 }
 
+                // Record this role as having no known creator, in case it's
+                // never seen going through the `_addToPanelBox` override
+                // (e.g. it already existed when this extension was
+                // enabled). First-write-wins in `recordItemCreator` means
+                // this is always safe: it never overwrites a creator
+                // already determined by the override, this session or a
+                // past one.
+                this.recordItemCreator(role, null);
+
                 // Then get a settings identifier for the item.
                 let itemSettingsId;
                 if (role.startsWith("appindicator-")) {
@@ -295,12 +383,28 @@ export default class BoxOrderManager extends GObject.Object {
                     // (which the ordering pass does) crashes gnome-shell. Leave
                     // tray icons wherever the AppIndicator extension places them.
                     continue;
-                } else if (role.startsWith("task-button-")) {
-                    // If the role indicates that the item is a Task Up
-                    // UltraLite item, then handle it differently.
-                    itemSettingsId = this.#handleTaskUpUltraLiteItem(role);
-                } else { // Otherwise just use the role as the settings identifier.
-                    itemSettingsId = role;
+                } else {
+                    // A role already tracked as a standalone top-level
+                    // entry must not get reclassified into a family.
+                    // This guards against misattribution when another
+                    // extension re-adds a core indicator (e.g.
+                    // tasks-in-panel removing and reinserting dateMenu to
+                    // reposition it) — the creator-uuid captured on that
+                    // re-add would otherwise absorb the indicator into
+                    // the wrong family.
+                    const isAlreadyStandalone = boxOrders.left.includes(role)
+                        || boxOrders.center.includes(role)
+                        || boxOrders.right.includes(role);
+                    if (!isAlreadyStandalone) {
+                        const family = this.#findFamilyForRole(role);
+                        if (family) {
+                            itemSettingsId = this.#handleFamilyItem(family, role);
+                        } else {
+                            itemSettingsId = role;
+                        }
+                    } else {
+                        itemSettingsId = role;
+                    }
                 }
 
                 // Add the items settings identifier to the box order, if it
@@ -326,5 +430,30 @@ export default class BoxOrderManager extends GObject.Object {
         this.#saveBoxOrder("left", boxOrders.left);
         this.#saveBoxOrder("center", boxOrders.center);
         this.#saveBoxOrder("right", boxOrders.right);
+
+        // Drop persisted creator entries for roles no longer referenced
+        // anywhere (not currently present, not in any box order, not a
+        // family member) — keeps `item-creators` from growing without
+        // bound for roles that are gone for good (e.g. tray icons or
+        // window-scoped roles that come and go across app restarts).
+        const stillReferencedRoles = new Set(currentlyPresentRoles);
+        for (const role of [...boxOrders.left, ...boxOrders.center, ...boxOrders.right]) {
+            stillReferencedRoles.add(role);
+        }
+        for (const family of FAMILIES) {
+            for (const role of this.#getStrv(familyOrderKey(family.id))) {
+                stillReferencedRoles.add(role);
+            }
+        }
+        let creatorsChanged = false;
+        for (const role of this.#itemCreatorUuids.keys()) {
+            if (!stillReferencedRoles.has(role)) {
+                this.#itemCreatorUuids.delete(role);
+                creatorsChanged = true;
+            }
+        }
+        if (creatorsChanged) {
+            this.#persistItemCreators();
+        }
     }
 }
