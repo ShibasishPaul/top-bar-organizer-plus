@@ -22,24 +22,22 @@ interface ResolvedBoxOrderItem {
 
 /**
  * This class provides an interfaces to the box orders stored in settings.
- * It takes care of handling AppIndicator and Task Up UltraLite items and
- * resolving from the internal item settings identifiers to roles.
+ * It takes care of handling Task Up UltraLite items and resolving from the
+ * internal item settings identifiers to roles.
  * In the end this results in convenient functions, which are directly useful in
  * other extension code.
+ *
+ * NOTE: AppIndicator/KStatusNotifierItem (tray) items are deliberately NOT
+ * tracked, resolved or ordered by this fork. Their containers are destroyed and
+ * recreated on the application side (readiness transitions, reconnects, legacy
+ * XEmbed socket rebuilds), and reparenting such a disposed container crashes
+ * gnome-shell (SIGSEGV in mutter). See `saveNewTopBarItems`.
  */
 export default class BoxOrderManager extends GObject.Object {
     static {
-        GObject.registerClass({
-            Signals: {
-                "appIndicatorReady": {},
-            },
-        }, this);
+        GObject.registerClass(this);
     }
 
-    // Can't have type guarantees here, since this is working with types from
-    // the KStatusNotifier/AppIndicator extension.
-    #appIndicatorReadyHandlerIdMap: Map<any, any>;
-    #appIndicatorItemSettingsIdToRolesMap: Map<string, string[]>;
     #taskUpUltraLiteItemRoles: string[];
     #settings: Gio.Settings;
 
@@ -47,8 +45,6 @@ export default class BoxOrderManager extends GObject.Object {
         // @ts-ignore Params should be passed, see: https://gjs.guide/guides/gobject/subclassing.html#subclassing-gobject
         super(params);
 
-        this.#appIndicatorReadyHandlerIdMap = new Map();
-        this.#appIndicatorItemSettingsIdToRolesMap = new Map();
         this.#taskUpUltraLiteItemRoles = [];
 
         this.#settings = settings;
@@ -82,66 +78,6 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
-     * Handles an AppIndicator/KStatusNotifierItem item by deriving a settings
-     * identifier and then associating the role of the given item to the items
-     * settings identifier.
-     * It then returns the derived settings identifier.
-     * In the case, where the settings identifier can't be derived, because the
-     * application can't be determined, this method throws an error. However it
-     * then also makes sure that once the app indicators "ready" signal emits,
-     * this classes "appIndicatorReady" signal emits as well, such that it and
-     * other methods can be called again to properly handle the item.
-     * @param {St.Bin} indicatorContainer - The container of the indicator of the
-     * AppIndicator/KStatusNotifierItem item.
-     * @param {string} role - The role of the AppIndicator/KStatusNotifierItem
-     * item.
-     * @returns {string} The derived items settings identifier.
-     */
-    #handleAppIndicatorItem(indicatorContainer: St.Bin, role: string): string {
-        // Since this is working with types from the
-        // AppIndicator/KStatusNotifierItem extension, we loose a bunch of type
-        // safety here.
-        // https://github.com/ubuntu/gnome-shell-extension-appindicator
-        const appIndicator = (indicatorContainer.get_child() as any)._indicator;
-        let application = appIndicator.id;
-
-        if (!application && this.#appIndicatorReadyHandlerIdMap) {
-            const handlerId = appIndicator.connect("ready", () => {
-                this.emit("appIndicatorReady");
-                appIndicator.disconnect(handlerId);
-                this.#appIndicatorReadyHandlerIdMap.delete(handlerId);
-            });
-            this.#appIndicatorReadyHandlerIdMap.set(handlerId, appIndicator);
-            throw new Error("Application can't be determined.");
-        }
-
-        // Since the Dropbox client appends its PID to the id, drop the PID and
-        // the hyphen before it.
-        if (application.startsWith("dropbox-client-")) {
-            application = "dropbox-client";
-        }
-
-        // Derive the items settings identifier from the application name.
-        const itemSettingsId = `appindicator-kstatusnotifieritem-${application}`;
-
-        // Associate the role with the items settings identifier.
-        let roles = this.#appIndicatorItemSettingsIdToRolesMap.get(itemSettingsId);
-        if (roles) {
-            // If the settings identifier already has an array of associated
-            // roles, just add the role to it, if needed.
-            if (!roles.includes(role)) {
-                roles.push(role);
-            }
-        } else {
-            // Otherwise create a new array.
-            this.#appIndicatorItemSettingsIdToRolesMap.set(itemSettingsId, [role]);
-        }
-
-        // Return the item settings identifier.
-        return itemSettingsId;
-    }
-
-    /**
      * Handles a Task Up UltraLite item by storing its role and returning the
      * Task Up UltraLite settings identifier.
      * This is needed since the Task Up UltraLite extension creates a bunch of
@@ -162,10 +98,9 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
-     * Gets a resolved box order for the given top bar box, where all
-     * AppIndicator and Task Up UltraLite items got resolved using their roles,
-     * meaning they might be present multiple times or not at all depending on
-     * the roles stored.
+     * Gets a resolved box order for the given top bar box, where all Task Up
+     * UltraLite items got resolved using their roles, meaning they might be
+     * present multiple times or not at all depending on the roles stored.
      * The items of the box order also have additional information stored.
      * @param {Box} box - The top bar box for which to get the resolved box order.
      * @returns {ResolvedBoxOrderItem[]} - The resolved box order.
@@ -193,27 +128,20 @@ export default class BoxOrderManager extends GObject.Object {
                 resolvedBoxOrderItem.hide = "default";
             }
 
-            // If the items settings identifier doesn't indicate that the item
-            // is an AppIndicator/KStatusNotifierItem item or the Task Up
-            // UltraLite item role group, then its identifier is the role and it
-            // can just be added to the resolved box order.
-            if (!itemSettingsId.startsWith("appindicator-kstatusnotifieritem-") &&
-                itemSettingsId !== "item-role-group-task-up-ultralite") {
+            // If the item's settings identifier isn't the Task Up UltraLite
+            // item role group, then its identifier is the role and it can just
+            // be added to the resolved box order.
+            // (Any leftover `appindicator-kstatusnotifieritem-*` identifiers
+            // from older settings are treated the same way; they won't match a
+            // current status area role and get dropped by getValidBoxOrder.)
+            if (itemSettingsId !== "item-role-group-task-up-ultralite") {
                 resolvedBoxOrderItem.role = resolvedBoxOrderItem.settingsId;
                 resolvedBoxOrder.push(resolvedBoxOrderItem);
                 continue;
             }
 
-            // If the items settings identifier indicates otherwise, then handle
-            // the item specially.
-
-            // Get the roles associated with the items settings id.
-            let roles: string[] = [];
-            if (itemSettingsId.startsWith("appindicator-kstatusnotifieritem-")) {
-                roles = this.#appIndicatorItemSettingsIdToRolesMap.get(resolvedBoxOrderItem.settingsId) ?? [];
-            } else if (itemSettingsId === "item-role-group-task-up-ultralite") {
-                roles = this.#taskUpUltraLiteItemRoles;
-            }
+            // The Task Up UltraLite item role group is expanded to its roles.
+            const roles: string[] = this.#taskUpUltraLiteItemRoles;
 
             // Create a new resolved box order item for each role and add it to
             // the resolved box order.
@@ -228,23 +156,8 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
-     * Disconnects all signals (and disables future signal connection).
-     * This is typically used before nulling an instance of this class to make
-     * sure all signals are disconnected.
-     */
-    disconnectSignals(): void {
-        for (const [handlerId, appIndicator] of this.#appIndicatorReadyHandlerIdMap) {
-            if (handlerId && appIndicator?.signalHandlerIsConnected(handlerId)) {
-                appIndicator.disconnect(handlerId);
-            }
-        }
-        // @ts-ignore
-        this.#appIndicatorReadyHandlerIdMap = null;
-    }
-
-    /**
-     * Gets a valid box order for the given top bar box, where all AppIndicator
-     * and Task Up UltraLite items got resolved and where only items are
+     * Gets a valid box order for the given top bar box, where all Task Up
+     * UltraLite items got resolved and where only items are
      * included, which are in some GNOME Shell top bar box.
      * The items of the box order also have additional information stored.
      * @param {Box} box - The top bar box to return the valid box order for.
@@ -339,20 +252,13 @@ export default class BoxOrderManager extends GObject.Object {
                 // Then get a settings identifier for the item.
                 let itemSettingsId;
                 if (role.startsWith("appindicator-")) {
-                    // If the role indicates that the item is an
-                    // AppIndicator/KStatusNotifierItem item, then handle it
-                    // differently.
-                    try {
-                        itemSettingsId = this.#handleAppIndicatorItem(indicatorContainer, role);
-                    } catch (e) {
-                        if (!(e instanceof Error)) {
-                            throw(e);
-                        }
-                        if (e.message !== "Application can't be determined.") {
-                            throw(e);
-                        }
-                        continue;
-                    }
+                    // AppIndicator/KStatusNotifierItem (tray) items are
+                    // intentionally skipped: they are never tracked, saved or
+                    // ordered. Their containers get destroyed and recreated on
+                    // the application side, and reparenting a disposed container
+                    // (which the ordering pass does) crashes gnome-shell. Leave
+                    // tray icons wherever the AppIndicator extension places them.
+                    continue;
                 } else if (role.startsWith("task-button-")) {
                     // If the role indicates that the item is a Task Up
                     // UltraLite item, then handle it differently.

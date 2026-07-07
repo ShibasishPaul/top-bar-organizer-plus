@@ -33,10 +33,6 @@ export default class TopBarOrganizerExtension extends Extension {
         // Overwrite the `Panel._addToPanelBox` method with one handling new
         // items.
         this.#overwritePanelAddToPanelBox();
-        // Handle AppIndicators getting ready, to handle new AppIndicator items.
-        this._boxOrderManager.connect("appIndicatorReady", () => {
-            this.#handleNewItemsAndOrderTopBar();
-        });
 
         // Handle changes of settings.
         this._settingsHandlerIds = [];
@@ -65,7 +61,6 @@ export default class TopBarOrganizerExtension extends Extension {
         for (const handlerId of this._settingsHandlerIds) {
             this._settings.disconnect(handlerId);
         }
-        this._boxOrderManager.disconnectSignals();
 
         // @ts-ignore
         this._settings = null;
