@@ -53,6 +53,13 @@ export default class TopBarOrganizerExtension extends Extension {
     _boxOrderManager!: BoxOrderManager;
     _settingsHandlerIds!: number[];
 
+    // Roles of AppIndicator/KStatusNotifierItem items already given their
+    // one-shot "safe" mode placement this session. In-memory only, same as
+    // the pre-persistence Task Up UltraLite role tracking used to be — cheap
+    // to re-derive every session, and there is nothing to persist since
+    // "safe" mode never repositions an icon a second time anyway.
+    #placedAppIndicatorRoles: Set<string> = new Set();
+
     enable(): void {
         this._settings = this.getSettings();
 
@@ -135,6 +142,9 @@ export default class TopBarOrganizerExtension extends Extension {
             const creatorUuid = extractCreatorExtensionUuid(new Error().stack, this.uuid);
             this._boxOrderManager.recordItemCreator(role, creatorUuid);
         };
+        const handleSafeModeAppIndicatorPlacement = (role: string, box: St.BoxLayout) => {
+            this.#handleSafeModeAppIndicatorPlacement(role, box);
+        };
 
         // Overwrite `Panel._addToPanelBox`.
         Panel.Panel.prototype._addToPanelBox = function(role, indicator, position, box) {
@@ -143,6 +153,15 @@ export default class TopBarOrganizerExtension extends Extension {
             // @ts-ignore
             this._originalAddToPanelBox(role, indicator, position, box);
             recordItemCreator(role);
+            if (role.startsWith("appindicator-")) {
+                // A deliberately separate, self-contained mechanism from the
+                // box-order reorder loop below (see
+                // `#handleSafeModeAppIndicatorPlacement`) — that loop
+                // reparents everything in its resolved list on every call
+                // regardless of whether an item changed, which is exactly
+                // the pattern that crashed gnome-shell for tray icons before.
+                handleSafeModeAppIndicatorPlacement(role, box);
+            }
             handleNewItemsAndOrderTopBar();
         };
     }
@@ -150,6 +169,93 @@ export default class TopBarOrganizerExtension extends Extension {
     ////////////////////////////////////////////////////////////////////////////
     /// Helper methods holding logic needed by other methods.                ///
     ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Finds the role of the given indicator container by looking it up in
+     * `Main.panel.statusArea`.
+     * @param {St.Bin} container - The indicator container to find the role of.
+     * @returns {string | undefined} The role, if found.
+     */
+    #findRoleForContainer(container: St.Bin): string | undefined {
+        for (const role in (Main.panel.statusArea as any)) {
+            if ((Main.panel.statusArea as any)[role]?.container === container) {
+                return role;
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * Implements "safe" mode AppIndicator/KStatusNotifierItem ordering: the
+     * first time a given tray role is seen, its container is moved (once)
+     * adjacent to the last other tray icon already present in the same box,
+     * then never touched again. If no other tray icon is present in the box
+     * yet, the icon is left wherever `Panel._addToPanelBox` already put it.
+     *
+     * Why this is needed at all: the AppIndicator/KStatusNotifierItem
+     * extension itself always adds its icons at the same fixed `position`
+     * argument (see its `indicatorStatusIcon.js`), so left alone, GNOME
+     * Shell's default same-position insertion order would already keep tray
+     * icons adjacent to each other. What actually scatters them is *this*
+     * extension's own `#orderTopBarItems` reordering everything in
+     * `left/center/right-box-order` on every pass (e.g. whenever some
+     * unrelated item elsewhere in the same box gets moved) — since tray
+     * items are never part of that list, they have no say in where a
+     * reparent of some other item leaves them. This method re-clusters them
+     * back together each time a *new* one appears, without needing to track
+     * or replay a persisted order.
+     *
+     * This is deliberately separate from `#orderTopBarItems`'s resolved-order
+     * reorder loop, which reparents everything in its list on every call
+     * regardless of whether a given item actually changed position — folding
+     * tray items into that loop would reparent them on unrelated panel
+     * events too, reintroducing the exact crash mechanism (reparenting a
+     * disposed tray container) this fork otherwise avoids for tray icons.
+     * @param {string} role - The role of the newly added item.
+     * @param {St.BoxLayout} box - The top bar box the item was added to.
+     */
+    #handleSafeModeAppIndicatorPlacement(role: string, box: St.BoxLayout): void {
+        if (this._settings.get_string("appindicator-order-mode") !== "safe") {
+            return;
+        }
+        if (this.#placedAppIndicatorRoles.has(role)) {
+            return;
+        }
+        // Mark as placed regardless of whether an anchor is found below —
+        // this is the one and only placement decision made for this role's
+        // entire lifetime.
+        this.#placedAppIndicatorRoles.add(role);
+
+        const container = (Main.panel.statusArea as any)[role]?.container;
+        if (!(container instanceof St.Bin)) {
+            // TODO: maybe add logging
+            return;
+        }
+
+        // Find the last other tray icon already present in this box.
+        let anchorContainer: St.Bin | null = null;
+        for (const child of box.get_children()) {
+            if (!(child instanceof St.Bin) || child === container) {
+                continue;
+            }
+            if (this.#findRoleForContainer(child)?.startsWith("appindicator-")) {
+                anchorContainer = child;
+            }
+        }
+        if (anchorContainer === null) {
+            // No other tray icon placed in this box yet to anchor to.
+            return;
+        }
+
+        const parent = container.get_parent();
+        if (parent !== null) {
+            parent.remove_child(container);
+        }
+        // Re-derive the anchor's index now that `container` has been
+        // removed, since removal may have shifted it.
+        const anchorIndex = box.get_children().indexOf(anchorContainer);
+        box.insert_child_at_index(container, anchorIndex + 1);
+    }
 
     /**
      * This method orders the top bar items of the specified box according to
