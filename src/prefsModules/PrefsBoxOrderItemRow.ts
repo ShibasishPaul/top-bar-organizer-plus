@@ -7,8 +7,7 @@ import GObject from "gi://GObject";
 import Adw from "gi://Adw";
 import GLib from "gi://GLib";
 
-import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
-
+import { getPrefsSettings } from "./prefsContext.js";
 import PrefsBoxOrderItemOptionsDialog from "./PrefsBoxOrderItemOptionsDialog.js";
 import type PrefsBoxOrderListBox from "./PrefsBoxOrderListBox.js";
 import { FAMILIES, type Family, findFamilyByGroupSettingsId, familyGroupSettingsId } from "../Families.js";
@@ -125,7 +124,7 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
         // Associate `this` with an item.
         this.item = item;
         this.family = family;
-        this.#settings = ExtensionPreferences.lookupByURL(import.meta.url)!.getSettings();
+        this.#settings = getPrefsSettings();
 
         if (this.item.startsWith("appindicator-kstatusnotifieritem-")) {
             // Set the title to something nicer, if the associated item is an

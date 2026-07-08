@@ -6,7 +6,7 @@ import GLib from "gi://GLib";
 import type Gio from "gi://Gio";
 import type Gtk from "gi://Gtk";
 
-import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
+import { getPrefsSettings } from "./prefsContext.js";
 
 export default class PrefsBoxOrderItemOptionsDialog extends Adw.Dialog {
     static {
@@ -29,7 +29,7 @@ export default class PrefsBoxOrderItemOptionsDialog extends Adw.Dialog {
         // Associate `this` with an item.
         this.item = item;
         // Load the settings.
-        this.#settings = ExtensionPreferences.lookupByURL(import.meta.url)!.getSettings();
+        this.#settings = getPrefsSettings();
 
         // Set the selected visibility row choice to the settings value.
         const itemsToHide = new Set(this.#settings.get_strv("hide"));

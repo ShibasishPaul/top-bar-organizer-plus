@@ -5,7 +5,7 @@ import Adw from "gi://Adw";
 import GLib from "gi://GLib";
 import Gtk from "gi://Gtk";
 
-import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
+import { getPrefsMetadata, getPrefsDir } from "./prefsContext.js";
 
 const UPSTREAM_PROJECT_URL = "https://gitlab.gnome.org/june/top-bar-organizer";
 
@@ -37,7 +37,7 @@ export default class PrefsAboutPage extends Adw.PreferencesPage {
     constructor(params = {}) {
         super(params);
 
-        const metadata = ExtensionPreferences.lookupByURL(import.meta.url)!.metadata;
+        const metadata = getPrefsMetadata();
         this.#homepageUrl = metadata.url as string;
 
         this._name_label.set_label(metadata.name as string);
@@ -62,7 +62,7 @@ export default class PrefsAboutPage extends Adw.PreferencesPage {
         // files (see package.sh) - opened locally instead of linking out,
         // so what's shown is always exactly what this specific version was
         // distributed under.
-        const copyingFile = ExtensionPreferences.lookupByURL(import.meta.url)!.dir.get_child("COPYING");
+        const copyingFile = getPrefsDir().get_child("COPYING");
         const launcher = new Gtk.FileLauncher({ file: copyingFile });
         launcher.launch(this.get_root() as Gtk.Window, null, (_source, result) => {
             try {

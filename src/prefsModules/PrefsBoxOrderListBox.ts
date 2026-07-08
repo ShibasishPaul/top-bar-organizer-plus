@@ -5,8 +5,7 @@ import GObject from "gi://GObject";
 import GLib from "gi://GLib";
 import type Gio from "gi://Gio";
 
-import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
-
+import { getPrefsSettings } from "./prefsContext.js";
 import PrefsBoxOrderItemRow from "./PrefsBoxOrderItemRow.js";
 import PrefsBoxOrderListEmptyPlaceholder from "./PrefsBoxOrderListEmptyPlaceholder.js";
 import { type Family, familyGroupSettingsId } from "../Families.js";
@@ -72,7 +71,7 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
         super(params);
 
         // Load the settings.
-        this.#settings = ExtensionPreferences.lookupByURL(import.meta.url)!.getSettings();
+        this.#settings = getPrefsSettings();
 
         // Add a placeholder widget for the case, where no GtkListBoxRows are
         // present.

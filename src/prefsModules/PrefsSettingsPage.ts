@@ -6,8 +6,7 @@ import GLib from "gi://GLib";
 import Gtk from "gi://Gtk";
 import Gio from "gi://Gio";
 
-import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
-
+import { getPrefsSettings } from "./prefsContext.js";
 import { exportSettingsToJson, importSettingsFromJson } from "../SettingsBackup.js";
 
 const MODES = ["off", "safe", "full"];
@@ -41,7 +40,7 @@ export default class PrefsSettingsPage extends Adw.PreferencesPage {
     constructor(params = {}) {
         super(params);
 
-        this.#settings = ExtensionPreferences.lookupByURL(import.meta.url)!.getSettings();
+        this.#settings = getPrefsSettings();
         this.#exceptionRows = [];
 
         this._mode_row.set_selected(MODES.indexOf(this.#settings.get_string("appindicator-order-mode")));
