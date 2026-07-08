@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="PrefsAboutPage" parent="AdwPreferencesPage">
+        <property name="title">About</property>
+        <property name="icon-name">open-menu-symbolic</property>
+        <child>
+            <object class="AdwPreferencesGroup">
+                <child>
+                    <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">6</property>
+                        <property name="halign">center</property>
+                        <property name="margin-top">12</property>
+                        <property name="margin-bottom">12</property>
+                        <child>
+                            <object class="GtkImage">
+                                <property name="icon-name">open-menu-symbolic</property>
+                                <property name="pixel-size">64</property>
+                                <property name="margin-bottom">6</property>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkLabel" id="name-label">
+                                <style>
+                                    <class name="title-1"/>
+                                </style>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkLabel" id="version-label">
+                                <style>
+                                    <class name="dim-label"/>
+                                </style>
+                            </object>
+                        </child>
+                        <child>
+                            <object class="GtkLabel" id="description-label">
+                                <property name="justify">center</property>
+                                <property name="wrap">True</property>
+                                <property name="margin-top">6</property>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+            </object>
+        </child>
+        <child>
+            <object class="AdwPreferencesGroup">
+                <property name="title">Links</property>
+                <child>
+                    <object class="AdwActionRow" id="homepage-row">
+                        <property name="title">Homepage</property>
+                        <property name="subtitle">GitHub repository</property>
+                        <property name="activatable">True</property>
+                        <signal name="activated" handler="onHomepageActivated"/>
+                        <child type="suffix">
+                            <object class="GtkImage">
+                                <property name="icon-name">adw-external-link-symbolic</property>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+                <child>
+                    <object class="AdwActionRow" id="issues-row">
+                        <property name="title">Report an Issue</property>
+                        <property name="activatable">True</property>
+                        <signal name="activated" handler="onIssuesActivated"/>
+                        <child type="suffix">
+                            <object class="GtkImage">
+                                <property name="icon-name">adw-external-link-symbolic</property>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+            </object>
+        </child>
+        <child>
+            <object class="AdwPreferencesGroup">
+                <property name="title">License</property>
+                <child>
+                    <object class="AdwActionRow" id="license-row">
+                        <property name="title">GNU General Public License v3.0 or later</property>
+                        <property name="subtitle">This program is free software: you can redistribute it and/or modify it under the terms of this license.</property>
+                        <property name="activatable">True</property>
+                        <signal name="activated" handler="onLicenseActivated"/>
+                        <child type="suffix">
+                            <object class="GtkImage">
+                                <property name="icon-name">adw-external-link-symbolic</property>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+            </object>
+        </child>
+        <child>
+            <object class="AdwPreferencesGroup">
+                <property name="title">Credits</property>
+                <child>
+                    <object class="AdwActionRow" id="upstream-row">
+                        <property name="title">Fork of Top Bar Organizer</property>
+                        <property name="subtitle">Originally created by June. This fork stops tracking/reordering AppIndicator and legacy tray icons to avoid conflicts with the AppIndicator extension, and uses an independent settings schema so it can be installed alongside the original.</property>
+                        <property name="activatable">True</property>
+                        <signal name="activated" handler="onUpstreamActivated"/>
+                        <child type="suffix">
+                            <object class="GtkImage">
+                                <property name="icon-name">adw-external-link-symbolic</property>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+            </object>
+        </child>
+    </template>
+</interface>

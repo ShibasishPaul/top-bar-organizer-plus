@@ -6,11 +6,26 @@
   "directories": {
     "doc": "docs"
   },
+  "homepage": "https://github.com/ShibasishPaul/top-bar-organizer-plus",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ShibasishPaul/top-bar-organizer-plus"
+    "url": "https://github.com/ShibasishPaul/top-bar-organizer-plus.git"
   },
-  "author": "June",
+  "bugs": {
+    "url": "https://github.com/ShibasishPaul/top-bar-organizer-plus/issues"
+  },
+  "author": {
+    "name": "Shibasish Paul",
+    "email": "51297506+ShibasishPaul@users.noreply.github.com",
+    "url": "https://github.com/ShibasishPaul"
+  },
+  "contributors": [
+    {
+      "name": "June",
+      "email": "june@jsts.xyz",
+      "url": "https://gitlab.gnome.org/june"
+    }
+  ],
   "license": "GPL-3.0-or-later",
   "devDependencies": {
     "eslint": "^8.57.1",
