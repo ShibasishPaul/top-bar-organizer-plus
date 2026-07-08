@@ -51,7 +51,6 @@ function extractCreatorExtensionUuid(stack: string | undefined, ownUuid: string)
 export default class TopBarOrganizerExtension extends Extension {
     _settings!: Gio.Settings;
     _boxOrderManager!: BoxOrderManager;
-    _settingsHandlerIds!: number[];
 
     // Roles of AppIndicator/KStatusNotifierItem items already given their
     // one-shot "safe" mode placement this session. In-memory only, same as
@@ -75,17 +74,15 @@ export default class TopBarOrganizerExtension extends Extension {
         // Handle AppIndicators getting ready (relevant to "full" mode), to
         // handle new AppIndicator items once their application can be
         // determined.
-        this._boxOrderManager.connect("appIndicatorReady", () => {
+        this._boxOrderManager.connectObject("appIndicatorReady", () => {
             this.#handleNewItemsAndOrderTopBar();
-        });
+        }, this);
 
         // Handle changes of settings.
-        this._settingsHandlerIds = [];
         const addSettingsChangeHandler = (settingsName: string) => {
-            const handlerId = this._settings.connect(`changed::${settingsName}`, () => {
+            this._settings.connectObject(`changed::${settingsName}`, () => {
                 this.#handleNewItemsAndOrderTopBar();
-            });
-            this._settingsHandlerIds.push(handlerId);
+            }, this);
         };
         addSettingsChangeHandler("left-box-order");
         addSettingsChangeHandler("center-box-order");
@@ -113,9 +110,8 @@ export default class TopBarOrganizerExtension extends Extension {
         Panel.Panel.prototype._originalAddToPanelBox = undefined;
 
         // Disconnect signals.
-        for (const handlerId of this._settingsHandlerIds) {
-            this._settings.disconnect(handlerId);
-        }
+        this._settings.disconnectObject(this);
+        this._boxOrderManager.disconnectObject(this);
         this._boxOrderManager.disconnectSignals();
 
         // @ts-ignore

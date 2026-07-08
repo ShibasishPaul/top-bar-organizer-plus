@@ -47,7 +47,13 @@ export default class BoxOrderManager extends GObject.Object {
 
     // Can't have type guarantees here, since this is working with types from
     // the KStatusNotifier/AppIndicator extension.
-    #appIndicatorReadyHandlerIdMap: Map<any, any>;
+    // One `BoxOrderManager` instance can have several tray icons awaiting
+    // their "ready" signal at once, each connected via `connectObject(...,
+    // this)` (see `handleAppIndicatorItem`) — `disconnectObject` drops every
+    // connection tracked under a given object at once, per source, so this
+    // still needs to remember which appIndicator objects to call it on;
+    // it just no longer needs to remember raw handler ids to do that.
+    #appIndicatorsAwaitingReady: Set<any> | null;
     #appIndicatorItemSettingsIdToRolesMap: Map<string, string[]>;
     #settings: Gio.Settings;
     // Persisted in the `item-creators` setting (as `role -> uuid`, with `""`
@@ -62,7 +68,7 @@ export default class BoxOrderManager extends GObject.Object {
         // @ts-ignore Params should be passed, see: https://gjs.guide/guides/gobject/subclassing.html#subclassing-gobject
         super(params);
 
-        this.#appIndicatorReadyHandlerIdMap = new Map();
+        this.#appIndicatorsAwaitingReady = new Set();
         this.#appIndicatorItemSettingsIdToRolesMap = new Map();
 
         this.#settings = settings;
@@ -228,13 +234,13 @@ export default class BoxOrderManager extends GObject.Object {
         }
 
         if (!application) {
-            if (appIndicator && this.#appIndicatorReadyHandlerIdMap) {
-                const handlerId = appIndicator.connect("ready", () => {
+            if (appIndicator && this.#appIndicatorsAwaitingReady) {
+                appIndicator.connectObject("ready", () => {
                     this.emit("appIndicatorReady");
-                    appIndicator.disconnect(handlerId);
-                    this.#appIndicatorReadyHandlerIdMap.delete(handlerId);
-                });
-                this.#appIndicatorReadyHandlerIdMap.set(handlerId, appIndicator);
+                    appIndicator.disconnectObject(this);
+                    this.#appIndicatorsAwaitingReady?.delete(appIndicator);
+                }, this);
+                this.#appIndicatorsAwaitingReady.add(appIndicator);
             }
             throw new Error("Application can't be determined.");
         }
@@ -450,13 +456,10 @@ export default class BoxOrderManager extends GObject.Object {
      * sure all signals are disconnected.
      */
     disconnectSignals(): void {
-        for (const [handlerId, appIndicator] of this.#appIndicatorReadyHandlerIdMap) {
-            if (handlerId && appIndicator?.signalHandlerIsConnected(handlerId)) {
-                appIndicator.disconnect(handlerId);
-            }
+        for (const appIndicator of this.#appIndicatorsAwaitingReady ?? []) {
+            appIndicator.disconnectObject(this);
         }
-        // @ts-ignore
-        this.#appIndicatorReadyHandlerIdMap = null;
+        this.#appIndicatorsAwaitingReady = null;
     }
 
     /**

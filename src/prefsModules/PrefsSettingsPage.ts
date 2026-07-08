@@ -50,8 +50,11 @@ export default class PrefsSettingsPage extends Adw.PreferencesPage {
         // Live-update from settings changes made by any source (e.g. dconf
         // directly, or a future second prefs window), not just this page's
         // own add/remove actions.
-        this.#settings.connect("changed::appindicator-order-exceptions", () => {
+        const exceptionsChangedHandlerId = this.#settings.connect("changed::appindicator-order-exceptions", () => {
             this.#rebuildExceptionRows();
+        });
+        this.connect("destroy", () => {
+            this.#settings.disconnect(exceptionsChangedHandlerId);
         });
     }
 
