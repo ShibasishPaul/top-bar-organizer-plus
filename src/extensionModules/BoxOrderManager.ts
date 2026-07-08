@@ -397,9 +397,18 @@ export default class BoxOrderManager extends GObject.Object {
             // per-application settings identifiers rather than roles
             // directly (see `#handleFullModeAppIndicatorItem`), so its
             // members are expanded to their currently-known roles instead.
+            // Also unlike other families, "appindicator"'s persisted group
+            // slot and member order must stay inert outside "full" mode —
+            // they're deliberately never cleared on a mode switch (so the
+            // configured order survives switching back to "full" later),
+            // so without this check the group would keep resolving to
+            // (and being reparented as) live roles in "off"/"safe" mode
+            // too, using settings that mode has no business acting on.
             const roles = family.id === "appindicator"
-                ? this.#getStrv(familyOrderKey(family.id))
-                    .flatMap(memberSettingsId => this.#appIndicatorItemSettingsIdToRolesMap.get(memberSettingsId) ?? [])
+                ? (this.#getAppIndicatorOrderMode() === "full"
+                    ? this.#getStrv(familyOrderKey(family.id))
+                        .flatMap(memberSettingsId => this.#appIndicatorItemSettingsIdToRolesMap.get(memberSettingsId) ?? [])
+                    : [])
                 : this.#getStrv(familyOrderKey(family.id));
 
             // Create a new resolved box order item for each role and add it to

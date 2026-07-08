@@ -11,7 +11,7 @@ import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/
 
 import PrefsBoxOrderItemOptionsDialog from "./PrefsBoxOrderItemOptionsDialog.js";
 import type PrefsBoxOrderListBox from "./PrefsBoxOrderListBox.js";
-import { FAMILIES, type Family, findFamilyByGroupSettingsId } from "../Families.js";
+import { FAMILIES, type Family, findFamilyByGroupSettingsId, familyGroupSettingsId } from "../Families.js";
 import { assignRoleToFamily, removeRoleFromFamily } from "../FamilySettings.js";
 
 export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
@@ -73,6 +73,16 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
     #settings: Gio.Settings;
     #drag_starting_point_x?: number;
     #drag_starting_point_y?: number;
+    // Whether this row represents the AppIndicator family's collapsed group
+    // slot (Item Order page) or one of its members (Groups page) while
+    // `appindicator-order-mode` isn't "full". Locked instead of removed,
+    // since the settings this row represents are deliberately preserved
+    // across mode switches (see `BoxOrderManager#getResolvedBoxOrder`) —
+    // this only prevents the UI from implying the position/order can be
+    // changed right now; `#getResolvedBoxOrder` independently guarantees
+    // the same thing has no effect on the actual top bar regardless of UI.
+    #appIndicatorLocked: boolean = false;
+    #appIndicatorOrderModeChangedHandlerId?: number;
 
     /**
      * @param {Object} params
@@ -113,6 +123,42 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
         }
 
         this._options_menu_button.set_menu_model(this.#buildOptionsMenu());
+
+        // Only the AppIndicator family's group slot row and its members can
+        // ever be locked this way — every other row is unaffected and this
+        // never re-evaluates for them.
+        if (this.item === familyGroupSettingsId("appindicator") || this.family?.id === "appindicator") {
+            this.#updateAppIndicatorLockState();
+            this.#appIndicatorOrderModeChangedHandlerId = this.#settings.connect("changed::appindicator-order-mode", () => {
+                this.#updateAppIndicatorLockState();
+            });
+            this.connect("destroy", () => {
+                if (this.#appIndicatorOrderModeChangedHandlerId !== undefined) {
+                    this.#settings.disconnect(this.#appIndicatorOrderModeChangedHandlerId);
+                }
+            });
+        }
+    }
+
+    /**
+     * Whether this row is currently locked (see `#appIndicatorLocked`).
+     * Consulted by `PrefsBoxOrderListBox#determineRowMoveActionEnable` to
+     * force-disable the move actions, and by `onDrop` as a defense-in-depth
+     * check against a locked row somehow still being dragged.
+     */
+    isLocked(): boolean {
+        return this.#appIndicatorLocked;
+    }
+
+    /**
+     * Refreshes this row's lock state and explanatory subtitle from the
+     * current `appindicator-order-mode` value.
+     */
+    #updateAppIndicatorLockState(): void {
+        this.#appIndicatorLocked = this.#settings.get_string("appindicator-order-mode") !== "full";
+        this.set_subtitle(this.#appIndicatorLocked
+            ? "Only reorderable while AppIndicator ordering mode is set to \"Full\""
+            : "");
     }
 
     /**
@@ -175,7 +221,13 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
         return menu;
     }
 
-    onDragPrepare(_source: Gtk.DragSource, x: number, y: number): Gdk.ContentProvider {
+    onDragPrepare(_source: Gtk.DragSource, x: number, y: number): Gdk.ContentProvider | null {
+        // Refuse to even start a drag for a locked row — returning `null`
+        // from a `GtkDragSource`'s "prepare" handler cancels the drag.
+        if (this.#appIndicatorLocked) {
+            return null;
+        }
+
         const value = new GObject.Value();
         value.init(PrefsBoxOrderItemRow.$gtype);
         value.set_object(this);
@@ -216,6 +268,13 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
 
         // If `this` got dropped onto itself, do nothing.
         if (value === this) {
+            return false;
+        }
+
+        // Defense-in-depth: refuse to move a locked row even if a drag
+        // somehow started for it (`onDragPrepare` already refuses to start
+        // one in the first place).
+        if (value.isLocked()) {
             return false;
         }
 

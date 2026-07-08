@@ -9,7 +9,7 @@ import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/
 
 import PrefsBoxOrderItemRow from "./PrefsBoxOrderItemRow.js";
 import PrefsBoxOrderListEmptyPlaceholder from "./PrefsBoxOrderListEmptyPlaceholder.js";
-import type { Family } from "../Families.js";
+import { type Family, familyGroupSettingsId } from "../Families.js";
 
 export default class PrefsBoxOrderListBox extends Gtk.ListBox {
     static {
@@ -63,6 +63,7 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
     #settings: Gio.Settings;
     #rowSignalHandlerIds = new Map<PrefsBoxOrderItemRow, number[]>();
     #settingsChangedHandlerId?: number;
+    #appIndicatorOrderModeChangedHandlerId!: number;
 
     /**
      * @param {Object} params
@@ -81,6 +82,15 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
             if (this.#settingsChangedHandlerId !== undefined) {
                 this.#settings.disconnect(this.#settingsChangedHandlerId);
             }
+            this.#settings.disconnect(this.#appIndicatorOrderModeChangedHandlerId);
+        });
+
+        // The AppIndicator family's group slot / member rows lock and
+        // unlock live as this changes (see `#isAppIndicatorLockedRow`) —
+        // independent of this list's own `boxOrder` key, so it needs its
+        // own listener rather than piggybacking on `#rebuildFromSettings`.
+        this.#appIndicatorOrderModeChangedHandlerId = this.#settings.connect("changed::appindicator-order-mode", () => {
+            this.determineRowMoveActionEnable();
         });
     }
 
@@ -219,6 +229,12 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
      */
     determineRowMoveActionEnable(): void {
         const isChained = this.isChained;
+        // Read fresh every call (rather than trusting each row's own
+        // possibly-stale cached lock flag) to sidestep signal-handler
+        // ordering between this list box's and each row's own
+        // `changed::appindicator-order-mode` listener.
+        const appIndicatorOrderMode = this.#settings.get_string("appindicator-order-mode");
+        const appIndicatorGroupSettingsId = familyGroupSettingsId("appindicator");
 
         for (let potentialPrefsBoxOrderItemRow of this) {
             // Only process PrefsBoxOrderItemRows.
@@ -227,6 +243,17 @@ export default class PrefsBoxOrderListBox extends Gtk.ListBox {
             }
 
             const row = potentialPrefsBoxOrderItemRow;
+
+            // A locked row (the AppIndicator family's group slot on the Item
+            // Order page, or one of its members on the Groups page, while
+            // mode isn't "full" — see `PrefsBoxOrderItemRow#isLocked`) can
+            // never be moved, regardless of its position in the list.
+            const isAppIndicatorRow = row.item === appIndicatorGroupSettingsId || row.family?.id === "appindicator";
+            if (isAppIndicatorRow && appIndicatorOrderMode !== "full") {
+                row.action_set_enabled("row.move-up", false);
+                row.action_set_enabled("row.move-down", false);
+                continue;
+            }
 
             // If the current row is the topmost row in the topmost list box
             // of the chain, then disable the move-up action. A standalone
