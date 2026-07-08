@@ -349,6 +349,27 @@ export default class BoxOrderManager extends GObject.Object {
     }
 
     /**
+     * Finds the family whose persisted member order (`family-order-${id}`)
+     * already includes the given role, if any.
+     *
+     * Consulted before falling back to `#findFamilyForRole`'s structural
+     * creator-uuid/role-prefix matching in `saveNewTopBarItems`'s
+     * reconciliation loop — that match only ever answers with the role's
+     * original creator and has no notion of a later, explicit
+     * reassignment. Without checking existing membership first, a role
+     * manually moved to a different family via the prefs "Move to Group"
+     * action would get silently pulled back into its original family on
+     * the very next reconciliation pass (triggered by any settings
+     * change), ending up a member of both at once.
+     * @param {string} role - The role to look up.
+     * @returns {Family | undefined} The family role is already a member
+     * of, if any.
+     */
+    #findExistingFamilyMembership(role: string): Family | undefined {
+        return FAMILIES.find(family => this.#getStrv(familyOrderKey(family.id)).includes(role));
+    }
+
+    /**
      * Gets a resolved box order for the given top bar box, where all Task Up
      * UltraLite items got resolved using their roles, meaning they might be
      * present multiple times or not at all depending on the roles stored.
@@ -596,7 +617,10 @@ export default class BoxOrderManager extends GObject.Object {
                         || boxOrders.center.includes(role)
                         || boxOrders.right.includes(role);
                     if (!isAlreadyStandalone) {
-                        const family = this.#findFamilyForRole(role);
+                        // Prefer a family this role is already an explicit
+                        // member of over re-deriving one structurally — see
+                        // `#findExistingFamilyMembership`.
+                        const family = this.#findExistingFamilyMembership(role) ?? this.#findFamilyForRole(role);
                         if (family) {
                             itemSettingsId = this.#handleFamilyItem(family, role);
                         } else {

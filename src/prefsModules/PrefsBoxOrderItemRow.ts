@@ -124,6 +124,27 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
 
         this._options_menu_button.set_menu_model(this.#buildOptionsMenu());
 
+        if (findFamilyByGroupSettingsId(this.item) !== undefined) {
+            // "Forget" can't have a lasting effect on a family's collapsed
+            // group slot row: as long as the family still has members,
+            // removing the group id from box-order just gets it silently
+            // re-added on the extension's next reconciliation pass (see
+            // `BoxOrderManager#saveNewTopBarItems`, which re-derives the
+            // group id for any still-live member and adds it back if
+            // missing). And if the family has no members left, this row
+            // doesn't exist to begin with — `removeRoleFromFamily` already
+            // replaces an emptied-out group's placeholder with its last
+            // freed member directly instead of leaving a pointless empty
+            // group behind. So there's no state this row can be in where
+            // "Forget" would ever have a lasting effect. Greyed out
+            // instead of left to silently no-op.
+            // (Individual family member rows on the Groups page are
+            // unaffected by this and keep "Forget" enabled — it's the only
+            // way to manually clear a stale member for a family that
+            // doesn't auto-prune, see `Family.pruneStaleMembers`.)
+            this.action_set_enabled("row.forget", false);
+        }
+
         // Only the AppIndicator family's group slot row and its members can
         // ever be locked this way — every other row is unaffected and this
         // never re-evaluates for them.

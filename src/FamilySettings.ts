@@ -53,6 +53,19 @@ export function removeSettingsIdFromBoxOrders(settings: Gio.Settings, settingsId
  * entirely until the extension side happens to re-derive it.
  */
 export function assignRoleToFamily(settings: Gio.Settings, family: Family, role: string): void {
+    // This writes up to three keys (a box-order array, the family's order
+    // key, and possibly another box-order array for the group placeholder).
+    // `delay()`/`apply()` batches them into one atomic backend commit, so
+    // the extension process — running in a separate GJS runtime, reacting
+    // to each key's own `changed` signal independently — never observes an
+    // in-between state where the role is already gone from its box-order
+    // array but not yet added to the family (or vice versa). Without this,
+    // `BoxOrderManager#saveNewTopBarItems` can catch the role in that gap,
+    // see it as an unclassified-but-still-present item that structurally
+    // matches this (or another) family, and reclassify it on its own,
+    // fighting this function's own writes.
+    settings.delay();
+
     const location = findSettingsIdLocation(settings, role);
     removeSettingsIdFromBoxOrders(settings, role);
 
@@ -68,6 +81,8 @@ export function assignRoleToFamily(settings: Gio.Settings, family: Family, role:
         order.splice(location.index, 0, groupId);
         settings.set_strv(location.key, order);
     }
+
+    settings.apply();
 }
 
 /**
@@ -77,6 +92,16 @@ export function assignRoleToFamily(settings: Gio.Settings, family: Family, role:
  * family's last member — an empty group has nothing left to place).
  */
 export function removeRoleFromFamily(settings: Gio.Settings, family: Family, role: string): void {
+    // See the matching comment in `assignRoleToFamily` — same cross-process
+    // race, same fix. Without batching these two writes, the extension
+    // process can observe the role already removed from the family's order
+    // but not yet reinstated in a box-order array, decide (via
+    // `#findFamilyForRole`'s structural creator-uuid/prefix match) that the
+    // role still belongs to this family, and silently re-add it — which is
+    // exactly what "Remove from Group" sometimes appearing to duplicate or
+    // silently undo itself turned out to be.
+    settings.delay();
+
     const orderKey = familyOrderKey(family.id);
     const remainingRoles = settings.get_strv(orderKey).filter(r => r !== role);
     settings.set_strv(orderKey, remainingRoles);
@@ -89,6 +114,7 @@ export function removeRoleFromFamily(settings: Gio.Settings, family: Family, rol
         // the family had members) — fall back to appending the freed role.
         const order = settings.get_strv("left-box-order");
         settings.set_strv("left-box-order", [...order, role]);
+        settings.apply();
         return;
     }
 
@@ -103,4 +129,6 @@ export function removeRoleFromFamily(settings: Gio.Settings, family: Family, rol
         order.splice(groupLocation.index, 0, role);
     }
     settings.set_strv(groupLocation.key, order);
+
+    settings.apply();
 }
