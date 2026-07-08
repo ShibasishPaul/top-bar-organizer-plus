@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
     <template class="PrefsAppIndicatorPage" parent="AdwPreferencesPage">
-        <property name="title">AppIndicator</property>
-        <property name="icon-name">utilities-tweak-tool-symbolic</property>
+        <property name="title">Settings</property>
+        <property name="icon-name">preferences-system-symbolic</property>
         <child>
             <object class="AdwPreferencesGroup">
                 <property name="title">Ordering</property>
@@ -17,6 +17,34 @@
                                     <item>Safe</item>
                                     <item>Full</item>
                                 </items>
+                            </object>
+                        </property>
+                        <!-- Without this, the row's long subtitle squeezes the
+                             collapsed selected-value label below its natural
+                             width, ellipsizing "Full" down to "F...". A fixed
+                             width-chars (as wide as the longest option) keeps
+                             it fully readable regardless of how tight the
+                             subtitle makes the row. -->
+                        <property name="factory">
+                            <object class="GtkBuilderListItemFactory">
+                                <property name="bytes"><![CDATA[
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="GtkListItem">
+        <property name="child">
+            <object class="GtkLabel">
+                <property name="xalign">0</property>
+                <property name="width-chars">4</property>
+                <binding name="label">
+                    <lookup name="string" type="GtkStringObject">
+                        <lookup name="item">GtkListItem</lookup>
+                    </lookup>
+                </binding>
+            </object>
+        </property>
+    </template>
+</interface>
+                                ]]></property>
                             </object>
                         </property>
                         <signal name="notify::selected-item" handler="onModeRowSelectionChanged"/>
