@@ -8,7 +8,7 @@ import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/
 
 import PrefsPage from "./prefsModules/PrefsPage.js";
 import PrefsGroupsPage from "./prefsModules/PrefsGroupsPage.js";
-import PrefsAppIndicatorPage from "./prefsModules/PrefsAppIndicatorPage.js";
+import PrefsSettingsPage from "./prefsModules/PrefsSettingsPage.js";
 
 export default class TopBarOrganizerPreferences extends ExtensionPreferences {
     // `fillPreferencesWindow` (rather than `getPreferencesWidget`) lets more
@@ -32,6 +32,6 @@ export default class TopBarOrganizerPreferences extends ExtensionPreferences {
 
         window.add(new PrefsPage());
         window.add(new PrefsGroupsPage());
-        window.add(new PrefsAppIndicatorPage());
+        window.add(new PrefsSettingsPage());
     }
 }

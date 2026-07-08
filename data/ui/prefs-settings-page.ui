@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <template class="PrefsAppIndicatorPage" parent="AdwPreferencesPage">
+    <template class="PrefsSettingsPage" parent="AdwPreferencesPage">
         <property name="title">Settings</property>
         <property name="icon-name">preferences-system-symbolic</property>
         <child>
@@ -62,6 +62,40 @@
                         <property name="show-apply-button">True</property>
                         <signal name="apply" handler="onAddExceptionEntryApply"/>
                         <signal name="entry-activated" handler="onAddExceptionEntryApply"/>
+                    </object>
+                </child>
+            </object>
+        </child>
+        <child>
+            <object class="AdwPreferencesGroup">
+                <property name="title">Backup</property>
+                <property name="description">Export every setting of this extension to a file, or restore them from one previously exported.</property>
+                <child>
+                    <object class="AdwActionRow">
+                        <property name="title">Export Settings</property>
+                        <property name="subtitle">Save all current settings to a file.</property>
+                        <property name="activatable-widget">export-button</property>
+                        <child type="suffix">
+                            <object class="GtkButton" id="export-button">
+                                <property name="valign">center</property>
+                                <property name="label">Export…</property>
+                                <signal name="clicked" handler="onExportButtonClicked"/>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+                <child>
+                    <object class="AdwActionRow">
+                        <property name="title">Import Settings</property>
+                        <property name="subtitle">Replace all current settings with ones from a file. This can't be undone.</property>
+                        <property name="activatable-widget">import-button</property>
+                        <child type="suffix">
+                            <object class="GtkButton" id="import-button">
+                                <property name="valign">center</property>
+                                <property name="label">Import…</property>
+                                <signal name="clicked" handler="onImportButtonClicked"/>
+                            </object>
+                        </child>
                     </object>
                 </child>
             </object>

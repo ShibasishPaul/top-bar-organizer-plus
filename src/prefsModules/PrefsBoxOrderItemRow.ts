@@ -65,6 +65,31 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
             }
             removeRoleFromFamily(row.#settings, row.family, row.item);
         });
+        // Convenience shortcut for a single AppIndicator item row (Groups
+        // page): adds it to `appindicator-order-exceptions` directly,
+        // instead of the user having to copy its application id over to the
+        // manual entry row on the Settings page. Idempotent — a no-op if
+        // the application id is already an exception; removing one is still
+        // only done from the Settings page's own exception list.
+        this.install_action("row.add-appindicator-exception", null, (self, _actionName, _param) => {
+            const row = self as PrefsBoxOrderItemRow;
+            if (row.family?.id !== "appindicator" || !row.family.formatMemberTitle) {
+                return;
+            }
+            // Not `row.get_title()`: the constructor sets an appindicator
+            // row's title via a simpler, family-agnostic branch (see below)
+            // that only strips the `appindicator-kstatusnotifieritem-`
+            // prefix, not also a legacy tray icon's `legacy-` prefix — using
+            // it here would add "legacy-steam" as an exception instead of
+            // "steam", never matching what `getAppIndicatorApplicationId`
+            // in `BoxOrderManager.ts` actually compares exceptions against.
+            const applicationId = row.family.formatMemberTitle(row.item);
+            const exceptions = row.#settings.get_strv("appindicator-order-exceptions");
+            if (!exceptions.includes(applicationId)) {
+                exceptions.push(applicationId);
+                row.#settings.set_strv("appindicator-order-exceptions", exceptions);
+            }
+        });
     }
 
     item: string;
@@ -212,6 +237,10 @@ export default class PrefsBoxOrderItemRow extends Adw.ActionRow {
                 // This row is a family member (Groups page) — offer to
                 // unassign it back to being a standalone top-level item.
                 groupSection.append("Remove from Group", "row.remove-from-group");
+                if (this.family.id === "appindicator") {
+                    // Convenience shortcut, see `row.add-appindicator-exception`.
+                    groupSection.append("Add to Exceptions", "row.add-appindicator-exception");
+                }
             } else if (FAMILIES.length > 0) {
                 // This row is a standalone item (Item Order page) — offer
                 // to assign it into any currently known family.

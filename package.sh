@@ -14,6 +14,7 @@ gnome-extensions pack "$REAL_BASE_DIR/dist" \
     --extra-source prefsModules \
     --extra-source Families.js \
     --extra-source FamilySettings.js \
+    --extra-source SettingsBackup.js \
     --extra-source ../data/ui \
     --extra-source ../data/css \
     --schema ../data/org.gnome.shell.extensions.top-bar-organizer-plus.gschema.xml
