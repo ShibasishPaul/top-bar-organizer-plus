@@ -127,7 +127,28 @@ The Settings page's **Export…** button writes every one of this extension's cu
 
 ## 🤝 Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for commit message conventions and code style.
+We welcome all contributions to make Top Bar Organizer Plus better for everyone!
+
+### Ways to Contribute
+
+- **🐛 Bug Reports**: Open an issue detailing the problem, GNOME Shell/extension versions, steps to reproduce, and screenshots/logs.
+- **💡 Feature Requests**: Open an issue explaining your idea, its use case, and how it should work (mockups are welcome!).
+- **📝 Documentation**: Submit PRs to improve the README, [CONTRIBUTING.md](./CONTRIBUTING.md), or inline code comments.
+- **⭐ Feedback & Testing**: Test across different GNOME Shell versions, share your experiences, and join discussions.
+
+### 🔧 Code Contributions
+
+1. **Fork & Branch**: Create a new branch in your fork.
+2. **Develop**: Keep changes focused. Follow commit conventions and code style (max 80 chars for JS) in [CONTRIBUTING.md](./CONTRIBUTING.md).
+3. **Test**: Ensure the extension builds and works on supported GNOME Shell versions (see `src/metadata.json`).
+4. **Submit PR**: Open a descriptive pull request and link any related issues (`#issue-number`).
+
+### Getting Started
+
+```bash
+git clone https://github.com/ShibasishPaul/top-bar-organizer-plus.git
+cd top-bar-organizer-plus
+```
 
 ## 🙏 Credits
 
