@@ -13,7 +13,7 @@ This is a fork of [Top Bar Organizer](https://gitlab.gnome.org/june/top-bar-orga
 
 ## 📦 Installation
 
-The extension is available on the [GNOME Extensions website](https://extensions.gnome.org/extension/4356/top-bar-organizer/).
+The extension is available on the [GNOME Extensions website](https://extensions.gnome.org/extension/10350/top-bar-organizer-plus/).
 
 Or install a release manually:
 
