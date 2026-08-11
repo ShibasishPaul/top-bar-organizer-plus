@@ -104,20 +104,37 @@ export default class TopBarOrganizerExtension extends Extension {
     disable(): void {
         // Revert the overwrite of `Panel._addToPanelBox`.
         // @ts-ignore
-        Panel.Panel.prototype._addToPanelBox = Panel.Panel.prototype._originalAddToPanelBox;
-        // Set `Panel._originalAddToPanelBox` to `undefined`.
-        // @ts-ignore
-        Panel.Panel.prototype._originalAddToPanelBox = undefined;
+        if (Panel.Panel.prototype._originalAddToPanelBox) {
+            Panel.Panel.prototype._addToPanelBox = Panel.Panel.prototype._originalAddToPanelBox;
+            // @ts-ignore
+            Panel.Panel.prototype._originalAddToPanelBox = undefined;
+        }
 
-        // Disconnect signals.
-        this._settings.disconnectObject(this);
-        this._boxOrderManager.disconnectObject(this);
-        this._boxOrderManager.disconnectSignals();
-
-        // @ts-ignore
-        this._settings = null;
-        // @ts-ignore
-        this._boxOrderManager = null;
+        // Disconnect signals safely.
+        if (this._settings) {
+            try {
+                this._settings.disconnectObject(this);
+            } catch (e) {
+                // Already disconnected
+            }
+            // @ts-ignore
+            this._settings = null;
+        }
+    
+        if (this._boxOrderManager) {
+            try {
+                this._boxOrderManager.disconnectObject(this);
+            } catch (e) {
+                // Already disconnected
+            }
+            try {
+                this._boxOrderManager.disconnectSignals();
+            } catch (e) {
+                // Already disconnected
+            }
+            // @ts-ignore
+            this._boxOrderManager = null;
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////
