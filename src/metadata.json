@@ -1,7 +1,7 @@
 {
     "uuid": "top-bar-organizer-plus@shibasishpaul.github.com",
     "name": "Top Bar Organizer Plus",
-    "description": "Organize the items of the top (menu)bar.",
+    "description": "A GNOME Shell extension that lets you reorder, group, and show/hide the items of the top (menu) bar — the clock, system indicators, AppIndicator/tray icons, and the items other extensions add — instead of being stuck with whatever order they happened to load in.\nA significantly improved fork of Top Bar Organizer",
     "version": 4,
     "version-name": "17.1",
     "shell-version": [ "45", "46", "47", "48", "49", "50" ],
