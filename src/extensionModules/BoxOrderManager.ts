@@ -235,11 +235,31 @@ export default class BoxOrderManager extends GObject.Object {
 
         if (!application) {
             if (appIndicator && this.#appIndicatorsAwaitingReady) {
-                appIndicator.connectObject("ready", () => {
-                    this.emit("appIndicatorReady");
-                    appIndicator.disconnectObject(this);
-                    this.#appIndicatorsAwaitingReady?.delete(appIndicator);
-                }, this);
+                appIndicator.connectObject(
+                    "ready", () => {
+                        this.emit("appIndicatorReady");
+                        appIndicator.disconnectObject(this);
+                        this.#appIndicatorsAwaitingReady?.delete(appIndicator);
+                    },
+                    // AppIndicator/KStatusNotifierItem Support's `AppIndicator`
+                    // is a plain `Signals.EventEmitter`, not a GObject — its own
+                    // `destroy()` (e.g. on D-Bus proxy init failure or the name
+                    // owner vanishing, both realistic for an icon that never
+                    // reaches "ready") calls `disconnectAll()`, which wipes the
+                    // "ready" handler above out from under `disconnectObject`'s
+                    // own bookkeeping (it isn't a `registerDestroyableType`d
+                    // GObject, so the shell's usual destroy-triggered auto-untrack
+                    // never kicks in). Without this, a since-destroyed indicator
+                    // left in `#appIndicatorsAwaitingReady` makes the eventual
+                    // `disconnectSignals()` call (e.g. on extension disable)
+                    // throw "No signal connection <id> found" trying to
+                    // disconnect a connection that's already gone.
+                    "destroy", () => {
+                        appIndicator.disconnectObject(this);
+                        this.#appIndicatorsAwaitingReady?.delete(appIndicator);
+                    },
+                    this
+                );
                 this.#appIndicatorsAwaitingReady.add(appIndicator);
             }
             throw new Error("Application can't be determined.");
