@@ -48,6 +48,8 @@ function extractCreatorExtensionUuid(stack: string | undefined, ownUuid: string)
     return null;
 }
 
+type Teardown = (ext: TopBarOrganizerExtension) => void;
+
 export default class TopBarOrganizerExtension extends Extension {
     _settings!: Gio.Settings;
     _boxOrderManager!: BoxOrderManager;
@@ -59,65 +61,95 @@ export default class TopBarOrganizerExtension extends Extension {
     // "safe" mode never repositions an icon a second time anyway.
     #placedAppIndicatorRoles: Set<string> = new Set();
 
+    // Cleanup actions for whatever `enable()` has set up so far, in setup
+    // order. GNOME Shell doesn't guarantee `disable()` only ever follows a
+    // successful `enable()` 1:1 (its own extensionSystem.js leaves a failed
+    // enable() stuck mid-state and can still invoke disable() unconditionally
+    // from its "rebase" mechanism, relevant here since this extension patches
+    // Panel.prototype._addToPanelBox). Tracking exactly what succeeded, rather
+    // than guessing from instance-field nullness, means `disable()` — called
+    // any number of times, from any point `enable()` may have reached — only
+    // ever undoes what actually happened.
+    #teardowns: Teardown[] = [];
+
+    #withTeardown<T>(setup: () => T, teardown: Teardown): T {
+        const result = setup();
+        this.#teardowns.push(teardown);
+        return result;
+    }
+
     enable(): void {
-        this._settings = this.getSettings();
+        try {
+            this._settings = this.#withTeardown(
+                () => this.getSettings(),
+                ext => {
+                    ext._settings.disconnectObject(ext);
+                    // @ts-ignore
+                    ext._settings = null;
+                }
+            );
 
-        this._boxOrderManager = new BoxOrderManager({}, this._settings);
+            this._boxOrderManager = this.#withTeardown(
+                () => new BoxOrderManager({}, this._settings),
+                ext => {
+                    ext._boxOrderManager.disconnectObject(ext);
+                    ext._boxOrderManager.disconnectSignals();
+                    // @ts-ignore
+                    ext._boxOrderManager = null;
+                }
+            );
 
-        /// Stuff to do on startup(extension enable).
-        // Initially handle new top bar items and order top bar boxes.
-        this.#handleNewItemsAndOrderTopBar();
-
-        // Overwrite the `Panel._addToPanelBox` method with one handling new
-        // items.
-        this.#overwritePanelAddToPanelBox();
-        // Handle AppIndicators getting ready (relevant to "full" mode), to
-        // handle new AppIndicator items once their application can be
-        // determined.
-        this._boxOrderManager.connectObject("appIndicatorReady", () => {
+            /// Stuff to do on startup(extension enable).
+            // Initially handle new top bar items and order top bar boxes.
             this.#handleNewItemsAndOrderTopBar();
-        }, this);
 
-        // Handle changes of settings.
-        const addSettingsChangeHandler = (settingsName: string) => {
-            this._settings.connectObject(`changed::${settingsName}`, () => {
+            // Overwrite the `Panel._addToPanelBox` method with one handling
+            // new items.
+            this.#withTeardown(
+                () => this.#overwritePanelAddToPanelBox(),
+                _ext => {
+                    // @ts-ignore
+                    Panel.Panel.prototype._addToPanelBox = Panel.Panel.prototype._originalAddToPanelBox;
+                    // @ts-ignore
+                    Panel.Panel.prototype._originalAddToPanelBox = undefined;
+                }
+            );
+
+            // Handle AppIndicators getting ready (relevant to "full" mode), to
+            // handle new AppIndicator items once their application can be
+            // determined.
+            this._boxOrderManager.connectObject("appIndicatorReady", () => {
                 this.#handleNewItemsAndOrderTopBar();
             }, this);
-        };
-        addSettingsChangeHandler("left-box-order");
-        addSettingsChangeHandler("center-box-order");
-        addSettingsChangeHandler("right-box-order");
-        addSettingsChangeHandler("hide");
-        addSettingsChangeHandler("show");
-        addSettingsChangeHandler("appindicator-order-mode");
-        addSettingsChangeHandler("appindicator-order-exceptions");
-        // A family's member order lives in its own `family-order-${id}` key,
-        // separate from the box-order keys above — reordering members within
-        // a family (e.g. on the Groups page) only ever touches this key, so
-        // without a handler here that reordering never triggers a re-order
-        // of the actual top bar.
-        for (const family of FAMILIES) {
-            addSettingsChangeHandler(familyOrderKey(family.id));
+
+            // Handle changes of settings. A family's member order lives in
+            // its own `family-order-${id}` key, separate from the box-order
+            // keys below — reordering members within a family (e.g. on the
+            // Groups page) only ever touches this key, so without a handler
+            // for it that reordering never triggers a re-order of the actual
+            // top bar.
+            [
+                "left-box-order",
+                "center-box-order",
+                "right-box-order",
+                "hide",
+                "show",
+                "appindicator-order-mode",
+                "appindicator-order-exceptions",
+                ...FAMILIES.map(family => familyOrderKey(family.id)),
+            ].forEach(settingsName => {
+                this._settings.connectObject(`changed::${settingsName}`, () => {
+                    this.#handleNewItemsAndOrderTopBar();
+                }, this);
+            });
+        } catch (e) {
+            this.disable();
+            throw e;
         }
     }
 
     disable(): void {
-        // Revert the overwrite of `Panel._addToPanelBox`.
-        // @ts-ignore
-        Panel.Panel.prototype._addToPanelBox = Panel.Panel.prototype._originalAddToPanelBox;
-        // Set `Panel._originalAddToPanelBox` to `undefined`.
-        // @ts-ignore
-        Panel.Panel.prototype._originalAddToPanelBox = undefined;
-
-        // Disconnect signals.
-        this._settings.disconnectObject(this);
-        this._boxOrderManager.disconnectObject(this);
-        this._boxOrderManager.disconnectSignals();
-
-        // @ts-ignore
-        this._settings = null;
-        // @ts-ignore
-        this._boxOrderManager = null;
+        this.#teardowns.splice(0).reverse().forEach(teardown => teardown(this));
     }
 
     ////////////////////////////////////////////////////////////////////////////
